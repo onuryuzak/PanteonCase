@@ -16,8 +16,10 @@ namespace Panteon.UI
         private readonly Dictionary<Text, int> _baseTextSizes = new Dictionary<Text, int>();
         private readonly Font _font = Resources.GetBuiltinResource<Font>("Arial.ttf");
         private readonly Texture2D _solidTexture;
+        private readonly Texture2D _circleTexture;
 
         public Sprite SolidSprite { get; }
+        public Sprite CircleSprite { get; }
         public float Scale { get; private set; } = 1f;
 
         public HudViewFactory()
@@ -31,6 +33,9 @@ namespace Panteon.UI
             _solidTexture.SetPixel(0, 0, Color.white);
             _solidTexture.Apply(false, true);
             SolidSprite = Sprite.Create(_solidTexture, new Rect(0f, 0f, 1f, 1f), Vector2.one * 0.5f, 1f);
+
+            _circleTexture = CreateCircleTexture(64);
+            CircleSprite = Sprite.Create(_circleTexture, new Rect(0f, 0f, 64f, 64f), Vector2.one * 0.5f, 64f);
         }
 
         public RectTransform CreateHudRoot()
@@ -187,6 +192,31 @@ namespace Panteon.UI
         {
             if (SolidSprite != null) Object.Destroy(SolidSprite);
             if (_solidTexture != null) Object.Destroy(_solidTexture);
+            if (CircleSprite != null) Object.Destroy(CircleSprite);
+            if (_circleTexture != null) Object.Destroy(_circleTexture);
+        }
+
+        private static Texture2D CreateCircleTexture(int size)
+        {
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Point,
+                wrapMode = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.HideAndDontSave
+            };
+            var pixels = new Color[size * size];
+            var center = (size - 1) * 0.5f;
+            var radiusSquared = center * center;
+            for (var y = 0; y < size; y++)
+            for (var x = 0; x < size; x++)
+            {
+                var dx = x - center;
+                var dy = y - center;
+                pixels[y * size + x] = dx * dx + dy * dy <= radiusSquared ? Color.white : Color.clear;
+            }
+            texture.SetPixels(pixels);
+            texture.Apply(false, true);
+            return texture;
         }
 
         private static void Stretch(RectTransform target)

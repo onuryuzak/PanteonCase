@@ -11,7 +11,7 @@ using UnityEngine;
 
 namespace Panteon.Gameplay.Units
 {
-    public sealed class Unit : Entity, IEntityPresentation, IPoolable
+    public sealed class Unit : Entity, IUnitPresentation, IPoolable
     {
         private GridManager _grid;
         private IPathfinder _pathfinder;
@@ -24,7 +24,9 @@ namespace Panteon.Gameplay.Units
         private const float SnapDuration = 0.12f;
         public UnitDefinitionSO Definition { get; private set; }
         public string DisplayName => Definition.DisplayName;
+        public string Description => Definition.Description;
         public Sprite Icon => Definition.Icon;
+        public int AttackDamage => Definition.AttackDamage;
         public UnitStateMachine StateMachine { get; } = new UnitStateMachine();
         public Faction Faction => Health.Faction;
         public int CurrentHP => Health.CurrentHP;

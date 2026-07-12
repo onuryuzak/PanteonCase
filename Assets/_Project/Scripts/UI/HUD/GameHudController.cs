@@ -87,11 +87,23 @@ namespace Panteon.UI
             _chromeView = new HudChromeView(root, _viewFactory, _manualUiScale);
             _productionView = new ProductionMenuView(root, _viewFactory);
             _informationView = new InformationPanelView(root, _viewFactory);
+            _informationView.PrewarmProductionButtons(GetMaximumProductionButtonCount());
             _boardViewport = new BoardViewportController(_boardCamera, _gridSize, _gridOrigin, _cellSize, _boardPaddingPercent);
 
             _chromeView.ScaleChanged += HandleScaleChanged;
             _productionView.BuildingRequested += HandleBuildingRequested;
             _productionView.SetBuildings(_buildings);
+        }
+
+        private int GetMaximumProductionButtonCount()
+        {
+            var maximum = 0;
+            foreach (var building in _buildings)
+            {
+                if (building == null || !building.CanProduce || building.Producibles == null) continue;
+                maximum = Mathf.Max(maximum, building.Producibles.Count);
+            }
+            return maximum;
         }
 
         private void SubscribeToEvents()

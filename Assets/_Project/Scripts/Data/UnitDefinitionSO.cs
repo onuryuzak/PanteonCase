@@ -6,6 +6,7 @@ namespace Panteon.Data
     public sealed class UnitDefinitionSO : ScriptableObject
     {
         [SerializeField] private string _displayName = "Soldier";
+        [SerializeField] private string _description = "Soldier for Desert";
         [SerializeField] private Sprite _icon;
         [SerializeField] private GameObject _prefab;
         [SerializeField, Min(1)] private int _maxHP = 10;
@@ -15,6 +16,7 @@ namespace Panteon.Data
         [SerializeField, Min(0.05f)] private float _attackCooldown = 1f;
 
         public string DisplayName => _displayName;
+        public string Description => _description;
         public Sprite Icon => _icon;
         public GameObject Prefab => _prefab;
         public int MaxHP => _maxHP;

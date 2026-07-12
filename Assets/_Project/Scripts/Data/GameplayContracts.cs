@@ -11,6 +11,12 @@ namespace Panteon.Data
         Sprite Icon { get; }
     }
 
+    public interface IUnitPresentation : IEntityPresentation
+    {
+        string Description { get; }
+        int AttackDamage { get; }
+    }
+
     public interface IProductionBuilding : IEntityPresentation
     {
         bool CanProduce { get; }
