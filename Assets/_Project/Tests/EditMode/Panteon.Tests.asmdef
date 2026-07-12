@@ -1,0 +1,7 @@
+{
+  "name": "Panteon.Tests",
+  "references": ["Panteon.Core", "Panteon.Data", "Panteon.Gameplay", "Panteon.UI"],
+  "includePlatforms": ["Editor"],
+  "optionalUnityReferences": ["TestAssemblies"]
+}
+
