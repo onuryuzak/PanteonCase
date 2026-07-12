@@ -1,0 +1,7 @@
+{
+  "name": "Panteon.Data",
+  "rootNamespace": "Panteon.Data",
+  "references": ["Panteon.Core"],
+  "autoReferenced": true
+}
+
