@@ -1,0 +1,6 @@
+{
+  "name": "Panteon.Gameplay",
+  "rootNamespace": "Panteon.Gameplay",
+  "references": ["Panteon.Core", "Panteon.Data"],
+  "autoReferenced": true
+}
