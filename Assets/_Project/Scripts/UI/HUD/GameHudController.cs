@@ -19,6 +19,7 @@ namespace Panteon.UI
         [SerializeField, Range(0.75f, 3f)] private float _manualUiScale = 1.35f;
 
         private readonly List<BuildingDefinitionSO> _buildings = new List<BuildingDefinitionSO>();
+        private readonly List<IEntityPresentation> _selectedUnits = new List<IEntityPresentation>();
         private EventBus _eventBus;
         private IBuildingPlacementService _placementService;
         private IDamageable _selected;
@@ -118,6 +119,7 @@ namespace Panteon.UI
 
         private void HandleBuildingSelected(BuildingSelected message)
         {
+            _selectedUnits.Clear();
             _selected = _selectedBuilding = message.Building;
             _status = $"Selected {message.Building.DisplayName}";
             RefreshStatus();
@@ -126,15 +128,22 @@ namespace Panteon.UI
 
         private void HandleUnitSelected(UnitSelected message)
         {
-            _selected = message.Units != null && message.Units.Count > 0 ? message.Units[0] : null;
+            _selectedUnits.Clear();
+            if (message.Units != null)
+                foreach (var unit in message.Units)
+                    if (unit != null && !unit.IsDead) _selectedUnits.Add(unit);
+
+            _selected = _selectedUnits.Count > 0 ? _selectedUnits[0] : null;
             _selectedBuilding = null;
-            if (_selected is IEntityPresentation presentation) _status = $"Selected {presentation.DisplayName}";
+            if (_selectedUnits.Count > 1) _status = $"Selected {_selectedUnits.Count} units";
+            else if (_selected is IEntityPresentation presentation) _status = $"Selected {presentation.DisplayName}";
             RefreshStatus();
             RefreshSelection();
         }
 
         private void HandleSelectionCleared(SelectionCleared _)
         {
+            _selectedUnits.Clear();
             _selected = null;
             _selectedBuilding = null;
             RefreshSelection();
@@ -154,8 +163,11 @@ namespace Panteon.UI
         private void RequestProduction(IProductionBuilding building, UnitDefinitionSO unit) =>
             _eventBus?.Publish(new ProductionRequested(building, unit));
 
-        private void RefreshSelection() =>
-            _informationView?.Show(_selected, _selectedBuilding, RequestProduction);
+        private void RefreshSelection()
+        {
+            if (_selectedUnits.Count > 1) _informationView?.ShowUnits(_selectedUnits);
+            else _informationView?.Show(_selected, _selectedBuilding, RequestProduction);
+        }
 
         private void RefreshStatus() => _productionView?.SetStatus(_status);
 

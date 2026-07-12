@@ -52,7 +52,7 @@ namespace Panteon.Gameplay
             if (_placementController != null) locator.Register<IBuildingPlacementService>(_placementController);
             if (_selectionController != null) locator.Register(_selectionController);
             _placementController?.Configure(_gridManager, buildingFactory, bus);
-            _selectionController?.Configure(_gridManager, bus);
+            _selectionController?.Configure(_gridManager, bus, unitFactory);
             FindObjectOfType<CameraFitToAspect>()?.Configure(_gridManager);
             StartCoroutine(PrewarmCatalogPrefabs());
         }

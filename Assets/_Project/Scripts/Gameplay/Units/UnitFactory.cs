@@ -16,6 +16,7 @@ namespace Panteon.Gameplay.Units
         private readonly EventBus _bus;
         private readonly Transform _root;
         private readonly Dictionary<Unit, GameObject> _prefabs = new Dictionary<Unit, GameObject>();
+        public IEnumerable<Unit> ActiveUnits => _prefabs.Keys;
 
         public UnitFactory(PoolManager pool, GridManager grid, IPathfinder pathfinder, EventBus bus, Transform root)
         { _pool = pool; _grid = grid; _pathfinder = pathfinder; _bus = bus; _root = root; }

@@ -13,30 +13,40 @@ namespace Panteon.Gameplay.Selection
     {
         [SerializeField] private Camera _camera;
         [SerializeField] private LayerMask _selectableMask = ~0;
+        [SerializeField, Min(1f)] private float _dragThreshold = 8f;
         private readonly List<Unit> _selectedUnits = new List<Unit>();
         private readonly List<IEntityPresentation> _selectedPresentations = new List<IEntityPresentation>();
         private ISelectable _selectedEntity;
         private GridManager _grid;
         private EventBus _bus;
+        private UnitFactory _unitFactory;
+        private DragSelectionView _dragSelectionView;
+        private Vector2 _dragStart;
+        private bool _primaryPointerDown;
+        private bool _isDragging;
 
-        public void Configure(GridManager grid, EventBus bus)
+        public void Configure(GridManager grid, EventBus bus, UnitFactory unitFactory)
         {
             if (_bus != null) _bus.Unsubscribe<EntityDied>(OnEntityDied);
             _grid = grid;
             _bus = bus;
+            _unitFactory = unitFactory;
+            _dragSelectionView = DragSelectionView.Ensure(gameObject);
             _bus?.Subscribe<EntityDied>(OnEntityDied);
         }
 
         private void OnDestroy()
         {
             if (_bus != null) _bus.Unsubscribe<EntityDied>(OnEntityDied);
+            _dragSelectionView?.Hide();
         }
 
         private void Update()
         {
-            if (_camera == null || _grid == null || IsPointerOverUI()) return;
-            if (Input.GetMouseButtonDown(0)) SelectAtPointer();
-            if (Input.GetMouseButtonDown(1) && _selectedUnits.Count > 0) IssueContextCommand();
+            if (_camera == null || _grid == null) return;
+            HandlePrimaryPointer();
+            if (!_primaryPointerDown && Input.GetMouseButtonDown(1) &&
+                _selectedUnits.Count > 0 && !IsPointerOverUI()) IssueContextCommand();
         }
 
         public void IssueGroupMove(IReadOnlyList<Unit> units, Vector2Int destination)
@@ -57,7 +67,50 @@ namespace Panteon.Gameplay.Selection
             foreach (var unit in _selectedUnits) if (unit != null) unit.Deselect();
             _selectedEntity = null;
             _selectedUnits.Clear();
+            _selectedPresentations.Clear();
             _bus?.Publish(new SelectionCleared());
+        }
+
+        private void HandlePrimaryPointer()
+        {
+            if (Input.GetMouseButtonDown(0) && !IsPointerOverUI())
+            {
+                _primaryPointerDown = true;
+                _isDragging = false;
+                _dragStart = Input.mousePosition;
+            }
+
+            if (!_primaryPointerDown) return;
+            var current = (Vector2)Input.mousePosition;
+            if (Input.GetMouseButton(0))
+            {
+                if (!_isDragging && (current - _dragStart).sqrMagnitude >= _dragThreshold * _dragThreshold)
+                    _isDragging = true;
+                if (_isDragging) _dragSelectionView?.Show(CreateScreenRect(_dragStart, current));
+            }
+
+            if (!Input.GetMouseButtonUp(0)) return;
+            if (_isDragging) SelectUnitsInRect(CreateScreenRect(_dragStart, current));
+            else SelectAtPointer();
+            ResetDragState();
+        }
+
+        private void SelectUnitsInRect(Rect screenRect)
+        {
+            ClearSelection();
+            if (_unitFactory == null) return;
+
+            foreach (var unit in _unitFactory.ActiveUnits)
+            {
+                if (unit == null || unit.IsDead || unit.Faction != Faction.Player) continue;
+                var screenPoint = _camera.WorldToScreenPoint(unit.transform.position);
+                if (screenPoint.z < 0f || !screenRect.Contains(screenPoint)) continue;
+                unit.Select();
+                _selectedUnits.Add(unit);
+                _selectedPresentations.Add(unit);
+            }
+
+            if (_selectedUnits.Count > 0) _bus?.Publish(new UnitSelected(_selectedPresentations));
         }
 
         private void SelectAtPointer()
@@ -101,10 +154,42 @@ namespace Panteon.Gameplay.Selection
 
         private void OnEntityDied(EntityDied message)
         {
-            if (ReferenceEquals(_selectedEntity, message.Entity)) _selectedEntity = null;
+            var selectedEntityDied = ReferenceEquals(_selectedEntity, message.Entity);
+            if (selectedEntityDied) _selectedEntity = null;
+
+            var removedUnit = false;
             for (var i = _selectedUnits.Count - 1; i >= 0; i--)
-                if (ReferenceEquals(_selectedUnits[i], message.Entity)) _selectedUnits.RemoveAt(i);
+            {
+                if (!ReferenceEquals(_selectedUnits[i], message.Entity)) continue;
+                _selectedUnits.RemoveAt(i);
+                removedUnit = true;
+            }
+
+            if (removedUnit)
+            {
+                _selectedPresentations.Clear();
+                foreach (var unit in _selectedUnits)
+                    if (unit != null && !unit.IsDead) _selectedPresentations.Add(unit);
+                if (_selectedPresentations.Count > 0) _bus?.Publish(new UnitSelected(_selectedPresentations));
+                else _bus?.Publish(new SelectionCleared());
+            }
+            else if (selectedEntityDied) _bus?.Publish(new SelectionCleared());
         }
+
+        private void OnDisable() => ResetDragState();
+
+        private void ResetDragState()
+        {
+            _primaryPointerDown = false;
+            _isDragging = false;
+            _dragSelectionView?.Hide();
+        }
+
+        private static Rect CreateScreenRect(Vector2 start, Vector2 end) => Rect.MinMaxRect(
+            Mathf.Min(start.x, end.x),
+            Mathf.Min(start.y, end.y),
+            Mathf.Max(start.x, end.x),
+            Mathf.Max(start.y, end.y));
 
         private Vector3 PointerWorld()
         {

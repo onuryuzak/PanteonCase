@@ -356,7 +356,6 @@ namespace Panteon.Gameplay.Units
             CancelCurrentCommand();
             StateMachine.ChangeState(UnitState.Dead);
             _bus?.Publish(new EntityDied(this));
-            if (IsSelected) _bus?.Publish(new SelectionCleared());
             _returnToPool?.Invoke(this);
         }
     }
