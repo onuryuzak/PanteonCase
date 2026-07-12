@@ -24,7 +24,8 @@ namespace Panteon.Gameplay
             _damageFeedback = DamageFeedbackView.Ensure(gameObject);
         }
 
-        protected void BindHealthBar(IDamageable source) => _healthBar?.Bind(source);
+        protected void BindHealthBar(IDamageable source, bool alwaysVisible = false) =>
+            _healthBar?.Bind(source, alwaysVisible);
         protected void BindDamageFeedback(IDamageable source) => _damageFeedback?.Bind(source);
 
         public virtual void Select()

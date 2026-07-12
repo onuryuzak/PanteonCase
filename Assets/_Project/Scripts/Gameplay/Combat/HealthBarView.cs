@@ -12,6 +12,7 @@ namespace Panteon.Gameplay.Combat
         [SerializeField] private Transform _fill;
         [SerializeField] private GameObject _visualRoot;
         private IDamageable _source;
+        private bool _alwaysVisible;
 
         public static HealthBarView Ensure(GameObject owner, float yOffset = 0.58f, int sortingOrder = 20)
         {
@@ -50,10 +51,11 @@ namespace Panteon.Gameplay.Combat
             visual.SetActive(false);
         }
 
-        public void Bind(IDamageable source)
+        public void Bind(IDamageable source, bool alwaysVisible = false)
         {
             Unbind();
             _source = source;
+            _alwaysVisible = alwaysVisible;
             if (_source == null) return;
             _source.OnHealthChanged += Refresh;
             Refresh(_source.CurrentHP, _source.MaxHP);
@@ -69,13 +71,15 @@ namespace Panteon.Gameplay.Combat
                 _fill.localScale = new Vector3(DefaultWidth * normalized, DefaultHeight, 1f);
                 _fill.localPosition = new Vector3(-DefaultWidth * 0.5f + (_fill.localScale.x * 0.5f), 0f, 0f);
             }
-            if (_visualRoot != null) _visualRoot.SetActive(current < max && current > 0);
+            if (_visualRoot != null)
+                _visualRoot.SetActive(current > 0 && (_alwaysVisible || current < max));
         }
 
         private void Unbind()
         {
             if (_source != null) _source.OnHealthChanged -= Refresh;
             _source = null;
+            _alwaysVisible = false;
         }
 
         private static SpriteRenderer CreateBarPart(string name, Transform parent, int sortingOrder, Color color)

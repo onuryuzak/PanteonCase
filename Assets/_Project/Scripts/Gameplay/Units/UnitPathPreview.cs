@@ -10,7 +10,7 @@ namespace Panteon.Gameplay.Units
     internal sealed class UnitPathPreview : MonoBehaviour
     {
         private const int CircleSegments = 20;
-        private static readonly Color PathColor = new Color(0.08f, 0.78f, 1f, 0.9f);
+        private static readonly Color PathColor = new Color(0.32f, 0.48f, 0.16f, 0.95f);
         private static Material _sharedMaterial;
 
         private readonly List<Vector2Int> _path = new List<Vector2Int>();

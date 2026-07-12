@@ -49,7 +49,7 @@ namespace Panteon.Gameplay.Buildings
             Health.OnHealthChanged += HandleHealthChanged;
             Health.OnDied += HandleDied;
             Health.Initialize(definition.MaxHP);
-            BindHealthBar(this);
+            BindHealthBar(this, true);
             BindDamageFeedback(this);
             transform.localScale = new Vector3(definition.FootprintSize.x, definition.FootprintSize.y, 1f);
             if (definition.CanProduce && _production == null)

@@ -50,7 +50,7 @@ namespace Panteon.Gameplay.Units
             Health.OnHealthChanged += HandleHealthChanged;
             Health.OnDied += HandleDied;
             Health.Initialize(definition.MaxHP, faction);
-            BindHealthBar(this);
+            BindHealthBar(this, true);
             BindDamageFeedback(this);
             _attackFireFeedback = AttackFireFeedbackView.Ensure(gameObject);
             _pathPreview = UnitPathPreview.Ensure(gameObject);
