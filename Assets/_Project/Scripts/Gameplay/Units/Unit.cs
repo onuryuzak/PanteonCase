@@ -19,6 +19,7 @@ namespace Panteon.Gameplay.Units
         private Action<Unit> _returnToPool;
         private Coroutine _currentCommand;
         private AttackFireFeedbackView _attackFireFeedback;
+        private UnitPathPreview _pathPreview;
         private int _pathGridRevision;
         private const float SnapDuration = 0.12f;
         public UnitDefinitionSO Definition { get; private set; }
@@ -52,6 +53,7 @@ namespace Panteon.Gameplay.Units
             BindHealthBar(this);
             BindDamageFeedback(this);
             _attackFireFeedback = AttackFireFeedbackView.Ensure(gameObject);
+            _pathPreview = UnitPathPreview.Ensure(gameObject);
             transform.localScale = Vector3.one;
             StateMachine.ChangeState(UnitState.Idle);
             name = $"UNT_{definition.DisplayName.Replace(" ", string.Empty)}_{GetInstanceID():000}";
@@ -62,6 +64,7 @@ namespace Panteon.Gameplay.Units
             CancelCurrentCommand();
             var path = _pathfinder.FindPath(GridPosition, destination, _grid);
             if (path == null || path.Count == 0) return false;
+            _pathPreview?.Show(path, _grid);
             _pathGridRevision = _grid.Revision;
             _currentCommand = StartCoroutine(FollowPath(path, destination));
             return true;
@@ -103,6 +106,7 @@ namespace Panteon.Gameplay.Units
                     }
 
                     path = replanned;
+                    _pathPreview?.Show(path, _grid);
                     _pathGridRevision = _grid.Revision;
                     index = 1;
                     continue;
@@ -117,6 +121,7 @@ namespace Panteon.Gameplay.Units
                 transform.position = target;
                 GridPosition = next;
                 index++;
+                _pathPreview?.SetFirstVisibleIndex(index);
             }
             FinishCommand(UnitState.Idle);
         }
@@ -262,6 +267,7 @@ namespace Panteon.Gameplay.Units
         {
             if (_currentCommand != null) StopCoroutine(_currentCommand);
             _currentCommand = null;
+            _pathPreview?.Clear();
             if (IsDead) return;
             UpdateGridPositionFromCurrentWorldPosition();
             StateMachine.ChangeState(UnitState.Idle);
@@ -269,6 +275,7 @@ namespace Panteon.Gameplay.Units
 
         private void FinishCommand(UnitState state)
         {
+            _pathPreview?.Clear();
             if (!IsDead && SmoothSnapToNearestWalkableCell(state)) return;
             StateMachine.ChangeState(state);
             _currentCommand = null;
