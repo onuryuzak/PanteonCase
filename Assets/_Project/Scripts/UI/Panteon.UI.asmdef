@@ -1,0 +1,6 @@
+{
+  "name": "Panteon.UI",
+  "rootNamespace": "Panteon.UI",
+  "references": ["Panteon.Core", "Panteon.Data", "UnityEngine.UI"],
+  "autoReferenced": true
+}

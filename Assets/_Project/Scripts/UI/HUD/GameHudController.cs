@@ -1,0 +1,191 @@
+using System.Collections.Generic;
+using Panteon.Core;
+using Panteon.Data;
+using UnityEngine;
+
+namespace Panteon.UI
+{
+    /// <summary>
+    /// Runtime HUD composition root. It coordinates views and domain events; rendering and layout live in dedicated collaborators.
+    /// </summary>
+    public sealed class GameHudController : MonoBehaviour, IInputBlocker
+    {
+        [SerializeField] private BuildingCatalogSO _catalog;
+        [SerializeField] private Camera _boardCamera;
+        [SerializeField] private Vector2Int _gridSize = new Vector2Int(24, 16);
+        [SerializeField] private Vector2 _gridOrigin = new Vector2(-12f, -8f);
+        [SerializeField, Min(0.1f)] private float _cellSize = 1f;
+        [SerializeField, Min(0f)] private float _boardPaddingPercent = 0.02f;
+        [SerializeField, Range(0.75f, 3f)] private float _manualUiScale = 1.35f;
+
+        private readonly List<BuildingDefinitionSO> _buildings = new List<BuildingDefinitionSO>();
+        private EventBus _eventBus;
+        private IBuildingPlacementService _placementService;
+        private IDamageable _selected;
+        private IProductionBuilding _selectedBuilding;
+        private HudViewFactory _viewFactory;
+        private HudChromeView _chromeView;
+        private ProductionMenuView _productionView;
+        private InformationPanelView _informationView;
+        private BoardViewportController _boardViewport;
+        private Rect _boardRect;
+        private int _lastWidth = -1;
+        private int _lastHeight = -1;
+        private float _lastScale = -1f;
+        private string _status = "Choose a building, then click a valid grid cell.";
+
+        private void Start()
+        {
+            ResolveDependencies();
+            BuildViews();
+            SubscribeToEvents();
+            RefreshLayout(true);
+            RefreshStatus();
+            RefreshSelection();
+        }
+
+        private void Update()
+        {
+            RefreshLayout(false);
+            _boardViewport?.Apply(_boardRect);
+        }
+
+        private void OnDestroy()
+        {
+            UnsubscribeFromEvents();
+            if (_chromeView != null) _chromeView.ScaleChanged -= HandleScaleChanged;
+            if (_productionView != null) _productionView.BuildingRequested -= HandleBuildingRequested;
+            _boardViewport?.Dispose();
+            _viewFactory?.Dispose();
+        }
+
+        public bool IsPointerBlocked(Vector2 screenPosition)
+        {
+            if (_boardRect.width <= 0f || _boardRect.height <= 0f) return false;
+            var guiPosition = new Vector2(screenPosition.x, Screen.height - screenPosition.y);
+            return !_boardRect.Contains(guiPosition);
+        }
+
+        private void ResolveDependencies()
+        {
+            ServiceLocator.Instance.Register<IInputBlocker>(this);
+            ServiceLocator.Instance.TryGet(out _eventBus);
+            ServiceLocator.Instance.TryGet(out _placementService);
+            if (_boardCamera == null) _boardCamera = Camera.main;
+
+            _buildings.Clear();
+            if (_catalog == null) return;
+            foreach (var building in _catalog.Buildings)
+                if (building != null) _buildings.Add(building);
+        }
+
+        private void BuildViews()
+        {
+            _viewFactory = new HudViewFactory();
+            var root = _viewFactory.CreateHudRoot();
+            _chromeView = new HudChromeView(root, _viewFactory, _manualUiScale);
+            _productionView = new ProductionMenuView(root, _viewFactory);
+            _informationView = new InformationPanelView(root, _viewFactory);
+            _boardViewport = new BoardViewportController(_boardCamera, _gridSize, _gridOrigin, _cellSize, _boardPaddingPercent);
+
+            _chromeView.ScaleChanged += HandleScaleChanged;
+            _productionView.BuildingRequested += HandleBuildingRequested;
+            _productionView.SetBuildings(_buildings);
+        }
+
+        private void SubscribeToEvents()
+        {
+            if (_eventBus == null) return;
+            _eventBus.Subscribe<BuildingSelected>(HandleBuildingSelected);
+            _eventBus.Subscribe<UnitSelected>(HandleUnitSelected);
+            _eventBus.Subscribe<SelectionCleared>(HandleSelectionCleared);
+            _eventBus.Subscribe<BuildingPlacementFailed>(HandlePlacementFailed);
+            _eventBus.Subscribe<EntityHealthChanged>(HandleHealthChanged);
+        }
+
+        private void UnsubscribeFromEvents()
+        {
+            if (_eventBus == null) return;
+            _eventBus.Unsubscribe<BuildingSelected>(HandleBuildingSelected);
+            _eventBus.Unsubscribe<UnitSelected>(HandleUnitSelected);
+            _eventBus.Unsubscribe<SelectionCleared>(HandleSelectionCleared);
+            _eventBus.Unsubscribe<BuildingPlacementFailed>(HandlePlacementFailed);
+            _eventBus.Unsubscribe<EntityHealthChanged>(HandleHealthChanged);
+        }
+
+        private void HandleBuildingRequested(BuildingDefinitionSO definition) =>
+            _placementService?.EnterPlacementMode(definition);
+
+        private void HandleBuildingSelected(BuildingSelected message)
+        {
+            _selected = _selectedBuilding = message.Building;
+            _status = $"Selected {message.Building.DisplayName}";
+            RefreshStatus();
+            RefreshSelection();
+        }
+
+        private void HandleUnitSelected(UnitSelected message)
+        {
+            _selected = message.Units != null && message.Units.Count > 0 ? message.Units[0] : null;
+            _selectedBuilding = null;
+            if (_selected is IEntityPresentation presentation) _status = $"Selected {presentation.DisplayName}";
+            RefreshStatus();
+            RefreshSelection();
+        }
+
+        private void HandleSelectionCleared(SelectionCleared _)
+        {
+            _selected = null;
+            _selectedBuilding = null;
+            RefreshSelection();
+        }
+
+        private void HandlePlacementFailed(BuildingPlacementFailed message)
+        {
+            _status = $"Invalid placement at {message.Cell}.";
+            RefreshStatus();
+        }
+
+        private void HandleHealthChanged(EntityHealthChanged message)
+        {
+            if (ReferenceEquals(message.Entity, _selected)) RefreshSelection();
+        }
+
+        private void RequestProduction(IProductionBuilding building, UnitDefinitionSO unit) =>
+            _eventBus?.Publish(new ProductionRequested(building, unit));
+
+        private void RefreshSelection() =>
+            _informationView?.Show(_selected, _selectedBuilding, RequestProduction);
+
+        private void RefreshStatus() => _productionView?.SetStatus(_status);
+
+        private void HandleScaleChanged(float value)
+        {
+            _manualUiScale = value;
+            RefreshLayout(true);
+        }
+
+        private void RefreshLayout(bool force)
+        {
+            var scale = CalculateScale(Screen.width, Screen.height);
+            if (!force && _lastWidth == Screen.width && _lastHeight == Screen.height && Mathf.Approximately(_lastScale, scale)) return;
+            _lastWidth = Screen.width;
+            _lastHeight = Screen.height;
+            _lastScale = scale;
+            _viewFactory.SetScale(scale);
+
+            var layout = HudLayout.Calculate(Screen.width, Screen.height, scale);
+            _boardRect = layout.Board;
+            _chromeView.Layout(layout.Notes, layout.BoardHeader);
+            _productionView.Layout(layout.Production);
+            _informationView.Layout(layout.Information);
+        }
+
+        private float CalculateScale(int width, int height)
+        {
+            if (width <= 0 || height <= 0) return 1f;
+            var resolutionScale = Mathf.Min(width / 1920f, height / 1080f);
+            return Mathf.Clamp(resolutionScale * _manualUiScale, 0.75f, 5f);
+        }
+    }
+}
