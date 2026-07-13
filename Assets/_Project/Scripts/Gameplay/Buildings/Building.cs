@@ -18,6 +18,7 @@ namespace Panteon.Gameplay.Buildings
         public string DisplayName => Definition.DisplayName;
         public string Description => Definition.Description;
         public Sprite Icon => Definition.Icon;
+        public Rect IconContentRect => Definition.VisualContentRect;
         public bool CanProduce => _production != null && _production.HasProducts;
         public System.Collections.Generic.IReadOnlyList<UnitDefinitionSO> Producibles => _production != null ? _production.Producibles : Definition.Producibles;
         public Faction Faction => Health.Faction;

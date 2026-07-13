@@ -103,7 +103,7 @@ namespace Panteon.UI
             foreach (var building in _buildings)
             {
                 var definition = building;
-                var button = _factory.Button(_content, definition.DisplayName, definition.Icon);
+                var button = _factory.Button(_content, definition.DisplayName, definition.Icon, definition.VisualContentRect);
                 button.onClick.AddListener(() => BuildingRequested?.Invoke(definition));
                 _buttons.Add(button);
             }

@@ -11,6 +11,7 @@ namespace Panteon.Data
         [SerializeField] private Sprite _icon;
         [SerializeField] private GameObject _prefab;
         [SerializeField] private Vector2Int _footprintSize = Vector2Int.one;
+        [SerializeField] private Rect _visualContentRect = new Rect(0f, 0f, 1f, 1f);
         [SerializeField, Min(1)] private int _maxHP = 100;
         [SerializeField] private bool _canProduce;
         [SerializeField] private List<UnitDefinitionSO> _producibles = new List<UnitDefinitionSO>();
@@ -21,6 +22,9 @@ namespace Panteon.Data
         public Sprite Icon => _icon;
         public GameObject Prefab => _prefab;
         public Vector2Int FootprintSize => _footprintSize;
+        public Rect VisualContentRect => _visualContentRect.width > 0f && _visualContentRect.height > 0f
+            ? _visualContentRect
+            : new Rect(0f, 0f, 1f, 1f);
         public int MaxHP => _maxHP;
         public bool CanProduce => _canProduce;
         public IReadOnlyList<UnitDefinitionSO> Producibles => _producibles;

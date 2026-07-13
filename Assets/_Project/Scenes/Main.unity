@@ -889,7 +889,6 @@ MonoBehaviour:
   _gridOrigin: {x: -12, y: -8}
   _cellSize: 1
   _boardPaddingPercent: 0.02
-  _manualUiScale: 2
 --- !u!4 &1848523969
 Transform:
   m_ObjectHideFlags: 0

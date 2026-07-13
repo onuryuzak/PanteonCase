@@ -12,12 +12,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 32223fed1fddc384e8406ae36c8bb375, type: 3}
   m_Name: SO_Soldier2
   m_EditorClassIdentifier: 
-  _displayName: Soldier 2
-  _description: Soldier for Desert
-  _icon: {fileID: 21300000, guid: 6d548e7ce8899e1438b2f8505f3f08ff, type: 3}
+  _displayName: Archer
+  _description: Close-range archer trained to fight beside the front line
+  _icon: {fileID: 7257567913506708742, guid: 72c22f22ea5e4488390ba536cd5ab98d, type: 3}
+  _iconContentRect:
+    x: 0.3020833
+    y: 0.2916667
+    width: 0.3645833
+    height: 0.4583333
   _prefab: {fileID: 1020327736556583752, guid: 08129b8e8c0717f40b98dcc3ddef7193, type: 3}
-  _maxHP: 10
+  _visualProfile: {fileID: 11400000, guid: 8d9061233d184347b2a432ad6a0ffc79, type: 2}
+  _maxHP: 14
   _attackDamage: 5
   _moveSpeed: 3
-  _attackRange: 1
+  _attackRangeType: 0
+  _rangedAttackRange: 4
   _attackCooldown: 1

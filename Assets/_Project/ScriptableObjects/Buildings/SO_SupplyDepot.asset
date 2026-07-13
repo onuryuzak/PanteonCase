@@ -14,9 +14,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _displayName: Supply Depot
   _description: Stores supplies for your faction
-  _icon: {fileID: 21300000, guid: 95de231c8f9c5af4daa1d39c23d2fcb4, type: 3}
+  _icon: {fileID: 21300000, guid: f64d3993d34d4410e83e766d40059c1b, type: 3}
   _prefab: {fileID: 5374815226957973616, guid: 0697da14bbc73a4448ed67ace1297902, type: 3}
   _footprintSize: {x: 3, y: 2}
+  _visualContentRect:
+    serializedVersion: 2
+    x: 0.0625
+    y: 0.0989583
+    width: 0.875
+    height: 0.8177083
   _maxHP: 60
   _canProduce: 0
   _producibles: []

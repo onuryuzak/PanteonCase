@@ -14,6 +14,7 @@ namespace Panteon.UI
         public static readonly Color MutedTextColor = new Color(0.7f, 0.76f, 0.84f, 1f);
 
         private readonly Dictionary<Text, int> _baseTextSizes = new Dictionary<Text, int>();
+        private readonly Dictionary<string, Sprite> _displaySprites = new Dictionary<string, Sprite>();
         private readonly Font _font = Resources.GetBuiltinResource<Font>("Arial.ttf");
         private readonly Texture2D _solidTexture;
         private readonly Texture2D _circleTexture;
@@ -49,6 +50,7 @@ namespace Panteon.UI
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
             scaler.scaleFactor = 1f;
 
+            RemoveLegacyScaleControls(canvasObject.transform);
             Disable(canvasObject.transform, "ProductionMenu");
             Disable(canvasObject.transform, "InfoPanel");
             Disable(canvasObject.transform, "PlacementGhostLayer");
@@ -96,12 +98,13 @@ namespace Panteon.UI
             return label;
         }
 
-        public Button Button(Transform parent, string label, Sprite icon)
+        public Button Button(Transform parent, string label, Sprite icon, Rect? contentRect = null)
         {
             var rect = CreateRect(string.IsNullOrWhiteSpace(label) ? "Button" : label.Replace(" ", string.Empty), parent);
             var image = rect.gameObject.AddComponent<Image>();
             image.sprite = SolidSprite;
             image.color = CardColor;
+            rect.gameObject.AddComponent<RectMask2D>();
             var button = rect.gameObject.AddComponent<Button>();
             var colors = button.colors;
             colors.normalColor = CardColor;
@@ -110,35 +113,12 @@ namespace Panteon.UI
             button.colors = colors;
 
             var iconImage = Image(rect, "Icon", new Color(1f, 1f, 1f, 0.08f));
-            iconImage.sprite = icon != null ? icon : SolidSprite;
+            iconImage.sprite = icon != null ? DisplaySprite(icon, contentRect ?? new Rect(0f, 0f, 1f, 1f)) : SolidSprite;
             iconImage.color = icon != null ? Color.white : new Color(1f, 1f, 1f, 0.08f);
             iconImage.preserveAspect = true;
             Text(rect, "Label", label, 8, FontStyle.Bold, TextAnchor.MiddleCenter, TextColor);
             LayoutButton(button);
             return button;
-        }
-
-        public Slider Slider(Transform parent, string name, float minimum, float maximum, float value)
-        {
-            var root = CreateRect(name, parent);
-            var slider = root.gameObject.AddComponent<Slider>();
-            slider.minValue = minimum;
-            slider.maxValue = maximum;
-            slider.value = value;
-            var background = Image(root, "Background", CardColor);
-            Stretch(background.rectTransform);
-            var fillArea = CreateRect("Fill Area", root);
-            Stretch(fillArea);
-            var fill = Image(fillArea, "Fill", AccentColor);
-            Stretch(fill.rectTransform);
-            var handleArea = CreateRect("Handle Slide Area", root);
-            Stretch(handleArea);
-            var handle = Image(handleArea, "Handle", TextColor);
-            handle.rectTransform.sizeDelta = new Vector2(18f, 28f);
-            slider.fillRect = fill.rectTransform;
-            slider.handleRect = handle.rectTransform;
-            slider.targetGraphic = handle;
-            return slider;
         }
 
         public void SetScale(float scale)
@@ -156,8 +136,14 @@ namespace Panteon.UI
             {
                 icon.anchorMin = icon.anchorMax = new Vector2(0.5f, 1f);
                 icon.pivot = new Vector2(0.5f, 1f);
-                icon.anchoredPosition = new Vector2(0f, -Scaled(8f));
-                icon.sizeDelta = Vector2.one * Scaled(30f);
+                var buttonRect = (RectTransform)button.transform;
+                var topInset = Mathf.Max(2f, buttonRect.rect.height * 0.06f);
+                var labelSpace = Mathf.Max(Scaled(20f), buttonRect.rect.height * 0.28f);
+                var availableWidth = buttonRect.rect.width * 0.82f;
+                var availableHeight = buttonRect.rect.height - topInset - labelSpace;
+                var iconSize = Mathf.Max(1f, Mathf.Min(availableWidth, availableHeight));
+                icon.anchoredPosition = new Vector2(0f, -topInset);
+                icon.sizeDelta = Vector2.one * iconSize;
             }
             var label = button.transform.Find("Label") as RectTransform;
             if (label == null) return;
@@ -169,6 +155,38 @@ namespace Panteon.UI
         }
 
         public float Scaled(float value) => value * Scale;
+
+        public Sprite DisplaySprite(Sprite source, Rect normalizedContentRect)
+        {
+            if (source == null) return SolidSprite;
+
+            var content = ClampNormalizedRect(normalizedContentRect);
+            if (content.xMin <= 0f && content.yMin <= 0f && content.xMax >= 1f && content.yMax >= 1f)
+                return source;
+
+            var key = $"{source.GetInstanceID()}:{content.x:F5}:{content.y:F5}:{content.width:F5}:{content.height:F5}";
+            if (_displaySprites.TryGetValue(key, out var cached) && cached != null) return cached;
+
+            // Sprite.texture points at the atlas texture after packing, so its crop
+            // coordinates must come from textureRect rather than the source asset rect.
+            var sourceRect = source.textureRect;
+            var croppedRect = new Rect(
+                sourceRect.x + sourceRect.width * content.x,
+                sourceRect.y + sourceRect.height * content.y,
+                sourceRect.width * content.width,
+                sourceRect.height * content.height);
+            var displaySprite = Sprite.Create(source.texture, croppedRect, Vector2.one * 0.5f, source.pixelsPerUnit);
+            displaySprite.name = $"{source.name}_UI";
+            _displaySprites[key] = displaySprite;
+            return displaySprite;
+        }
+
+        public static void SetButtonIconScale(Button button, float scale)
+        {
+            if (button == null) return;
+            var icon = button.transform.Find("Icon") as RectTransform;
+            if (icon != null) icon.localScale = Vector3.one * Mathf.Max(0.1f, scale);
+        }
         public Rect ScaledRect(float x, float y, float width, float height) =>
             new Rect(Scaled(x), Scaled(y), width, Scaled(height));
 
@@ -190,10 +208,22 @@ namespace Panteon.UI
 
         public void Dispose()
         {
+            foreach (var sprite in _displaySprites.Values)
+                if (sprite != null) Object.Destroy(sprite);
+            _displaySprites.Clear();
             if (SolidSprite != null) Object.Destroy(SolidSprite);
             if (_solidTexture != null) Object.Destroy(_solidTexture);
             if (CircleSprite != null) Object.Destroy(CircleSprite);
             if (_circleTexture != null) Object.Destroy(_circleTexture);
+        }
+
+        private static Rect ClampNormalizedRect(Rect rect)
+        {
+            var xMin = Mathf.Clamp01(rect.xMin);
+            var yMin = Mathf.Clamp01(rect.yMin);
+            var xMax = Mathf.Clamp(rect.xMax, xMin + 0.0001f, 1f);
+            var yMax = Mathf.Clamp(rect.yMax, yMin + 0.0001f, 1f);
+            return Rect.MinMaxRect(xMin, yMin, xMax, yMax);
         }
 
         private static Texture2D CreateCircleTexture(int size)
@@ -219,14 +249,6 @@ namespace Panteon.UI
             return texture;
         }
 
-        private static void Stretch(RectTransform target)
-        {
-            target.anchorMin = Vector2.zero;
-            target.anchorMax = Vector2.one;
-            target.offsetMin = Vector2.zero;
-            target.offsetMax = Vector2.zero;
-        }
-
         private static T EnsureComponent<T>(GameObject target) where T : Component
         {
             var component = target.GetComponent<T>();
@@ -237,6 +259,22 @@ namespace Panteon.UI
         {
             var child = parent.Find(childName);
             if (child != null) child.gameObject.SetActive(false);
+        }
+
+        private static void RemoveLegacyScaleControls(Transform root)
+        {
+            if (root == null) return;
+            for (var i = root.childCount - 1; i >= 0; i--)
+            {
+                var child = root.GetChild(i);
+                if (child.name == "UiScaleTitle" || child.name == "UiScaleSlider" || child.name == "UiScaleValue")
+                {
+                    Object.Destroy(child.gameObject);
+                    continue;
+                }
+
+                RemoveLegacyScaleControls(child);
+            }
         }
 
         private static void EnsureEventSystem()

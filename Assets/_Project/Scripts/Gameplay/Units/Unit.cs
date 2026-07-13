@@ -20,12 +20,16 @@ namespace Panteon.Gameplay.Units
         private Coroutine _currentCommand;
         private AttackFireFeedbackView _attackFireFeedback;
         private UnitPathPreview _pathPreview;
+        private UnitAnimatorView _animatorView;
+        private UnitProjectileView _projectileView;
         private int _pathGridRevision;
+        private int _lastKnownHP;
         private const float SnapDuration = 0.12f;
         public UnitDefinitionSO Definition { get; private set; }
         public string DisplayName => Definition.DisplayName;
         public string Description => Definition.Description;
         public Sprite Icon => Definition.Icon;
+        public Rect IconContentRect => Definition.IconContentRect;
         public int AttackDamage => Definition.AttackDamage;
         public UnitStateMachine StateMachine { get; } = new UnitStateMachine();
         public Faction Faction => Health.Faction;
@@ -51,11 +55,15 @@ namespace Panteon.Gameplay.Units
             Health.OnDied -= HandleDied;
             Health.OnHealthChanged += HandleHealthChanged;
             Health.OnDied += HandleDied;
+            _lastKnownHP = definition.MaxHP;
             Health.Initialize(definition.MaxHP, faction);
             BindHealthBar(this, true);
             BindDamageFeedback(this);
             _attackFireFeedback = AttackFireFeedbackView.Ensure(gameObject);
             _pathPreview = UnitPathPreview.Ensure(gameObject);
+            _animatorView = UnitAnimatorView.Ensure(gameObject);
+            _animatorView.Initialize(definition.VisualProfile, StateMachine);
+            _projectileView = UnitProjectileView.Ensure(gameObject);
             transform.localScale = Vector3.one;
             StateMachine.ChangeState(UnitState.Idle);
             name = $"UNT_{definition.DisplayName.Replace(" ", string.Empty)}_{GetInstanceID():000}";
@@ -89,6 +97,8 @@ namespace Panteon.Gameplay.Units
             Deselect();
             Health.OnHealthChanged -= HandleHealthChanged;
             Health.OnDied -= HandleDied;
+            _animatorView?.Release();
+            _projectileView?.Stop();
         }
 
         private IEnumerator FollowPath(List<Vector2Int> path, Vector2Int destination)
@@ -115,6 +125,7 @@ namespace Panteon.Gameplay.Units
                 }
 
                 var target = _grid.CellToWorld(next);
+                _animatorView?.SetFacing(target.x - transform.position.x);
                 while ((transform.position - target).sqrMagnitude > 0.0025f)
                 {
                     transform.position = Vector3.MoveTowards(transform.position, target, Definition.MoveSpeed * Time.deltaTime);
@@ -153,6 +164,7 @@ namespace Panteon.Gameplay.Units
                     for (var i = 1; i < path.Count; i++)
                     {
                         var point = _grid.CellToWorld(path[i]);
+                        _animatorView?.SetFacing(point.x - transform.position.x);
                         while ((transform.position - point).sqrMagnitude > 0.0025f)
                         {
                             if (target == null || target.IsDead)
@@ -169,9 +181,17 @@ namespace Panteon.Gameplay.Units
                     }
                 }
                 StateMachine.ChangeState(UnitState.Attacking);
-                _attackFireFeedback?.PlayTowards(targetComponent.transform.position);
+                _animatorView?.PlayAttack(targetComponent.transform.position);
+                if (_animatorView != null && _animatorView.UsesAttackFire)
+                    _attackFireFeedback?.PlayTowards(targetComponent.transform.position);
+                var impactDelay = _animatorView != null ? _animatorView.AttackImpactDelay : 0f;
+                _projectileView?.Play(_animatorView != null ? _animatorView.ProjectileSprite : null,
+                    targetComponent.transform.position, impactDelay);
+                if (impactDelay > 0f) yield return new WaitForSeconds(impactDelay);
+                if (target == null || target.IsDead) break;
                 target.TakeDamage(Definition.AttackDamage);
-                yield return new WaitForSeconds(Definition.AttackCooldown);
+                var remainingCooldown = Mathf.Max(0f, Definition.AttackCooldown - impactDelay);
+                if (remainingCooldown > 0f) yield return new WaitForSeconds(remainingCooldown);
             }
             FinishCommand(UnitState.Idle);
         }
@@ -270,6 +290,7 @@ namespace Panteon.Gameplay.Units
             if (_currentCommand != null) StopCoroutine(_currentCommand);
             _currentCommand = null;
             _pathPreview?.Clear();
+            _projectileView?.Stop();
             if (IsDead) return;
             UpdateGridPositionFromCurrentWorldPosition();
             StateMachine.ChangeState(UnitState.Idle);
@@ -351,7 +372,12 @@ namespace Panteon.Gameplay.Units
             return fallback;
         }
 
-        private void HandleHealthChanged(int current, int max) => _bus?.Publish(new EntityHealthChanged(this, current, max));
+        private void HandleHealthChanged(int current, int max)
+        {
+            if (current > 0 && current < _lastKnownHP) _animatorView?.PlayHit();
+            _lastKnownHP = current;
+            _bus?.Publish(new EntityHealthChanged(this, current, max));
+        }
 
         private void HandleDied()
         {

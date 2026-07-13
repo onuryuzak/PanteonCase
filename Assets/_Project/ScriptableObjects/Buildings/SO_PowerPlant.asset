@@ -14,9 +14,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _displayName: Power Plant
   _description: Provides power to your faction
-  _icon: {fileID: 21300000, guid: 98610b87833090f45b3c96992ebe6219, type: 3}
+  _icon: {fileID: 21300000, guid: a45aff6aa2c5d4d5f879c10f0231ba12, type: 3}
   _prefab: {fileID: 2370541015456909712, guid: 92249533b74ea984da20fa661c92ba75, type: 3}
   _footprintSize: {x: 2, y: 3}
+  _visualContentRect:
+    serializedVersion: 2
+    x: 0.0833333
+    y: 0.03125
+    width: 0.8333333
+    height: 0.828125
   _maxHP: 50
   _canProduce: 0
   _producibles: []

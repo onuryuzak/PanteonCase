@@ -29,7 +29,7 @@ namespace Panteon.Gameplay.Buildings
             if (_ghost != null)
             {
                 _ghost.sprite = definition.Icon;
-                _ghost.transform.localScale = new Vector3(definition.FootprintSize.x, definition.FootprintSize.y, 1f);
+                ApplyGhostLayout(definition);
                 _ghost.gameObject.SetActive(true);
             }
         }
@@ -48,8 +48,7 @@ namespace Panteon.Gameplay.Buildings
             _valid = _factory != null && _factory.CanPlace(_activeDefinition, _hoveredCell);
             if (_ghost != null)
             {
-                _ghost.transform.position = _grid.AreaToWorldCenter(_hoveredCell, _activeDefinition.FootprintSize);
-                _ghost.transform.localScale = new Vector3(_activeDefinition.FootprintSize.x, _activeDefinition.FootprintSize.y, 1f);
+                ApplyGhostLayout(_activeDefinition);
                 _ghost.color = _valid ? new Color(0.2f, 1f, 0.35f, 0.65f) : new Color(1f, 0.15f, 0.15f, 0.75f);
             }
 
@@ -70,6 +69,17 @@ namespace Panteon.Gameplay.Buildings
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return true;
             IInputBlocker blocker;
             return ServiceLocator.Instance.TryGet(out blocker) && blocker.IsPointerBlocked(Input.mousePosition);
+        }
+
+        private void ApplyGhostLayout(BuildingDefinitionSO definition)
+        {
+            if (_ghost == null || definition == null) return;
+            float scale;
+            Vector3 offset;
+            if (!BuildingVisualScaleUtility.TryGetWorldLayout(definition, out scale, out offset)) return;
+            _ghost.transform.localScale = new Vector3(scale, scale, 1f);
+            if (_grid != null)
+                _ghost.transform.position = _grid.AreaToWorldCenter(_hoveredCell, definition.FootprintSize) + offset;
         }
     }
 }

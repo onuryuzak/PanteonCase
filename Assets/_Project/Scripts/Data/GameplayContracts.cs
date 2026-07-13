@@ -9,6 +9,7 @@ namespace Panteon.Data
     {
         string DisplayName { get; }
         Sprite Icon { get; }
+        Rect IconContentRect { get; }
     }
 
     public interface IUnitPresentation : IEntityPresentation

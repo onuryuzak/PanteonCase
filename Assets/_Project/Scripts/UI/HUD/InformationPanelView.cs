@@ -204,7 +204,9 @@ namespace Panteon.UI
                 if (!active) continue;
                 var unit = units[i];
                 _unitRows[i].Name.text = unit.DisplayName;
-                _unitRows[i].Icon.sprite = unit.Icon != null ? unit.Icon : _factory.SolidSprite;
+                _unitRows[i].Icon.sprite = unit.Icon != null
+                    ? _factory.DisplaySprite(unit.Icon, unit.IconContentRect)
+                    : _factory.SolidSprite;
                 _unitRows[i].Icon.color = unit.Icon != null ? Color.white : HudViewFactory.MutedTextColor;
             }
 
@@ -226,7 +228,9 @@ namespace Panteon.UI
             _unitDetailRoot.gameObject.SetActive(true);
             _buildingDetailRoot.gameObject.SetActive(false);
 
-            _unitPortraitIcon.sprite = unit.Icon != null ? unit.Icon : _factory.SolidSprite;
+            _unitPortraitIcon.sprite = unit.Icon != null
+                ? _factory.DisplaySprite(unit.Icon, unit.IconContentRect)
+                : _factory.SolidSprite;
             _unitPortraitIcon.color = unit.Icon != null ? Color.white : HudViewFactory.MutedTextColor;
             _unitName.text = unit.DisplayName;
             _unitDescription.text = unit.Description;
@@ -248,7 +252,9 @@ namespace Panteon.UI
             _hp.gameObject.SetActive(false);
             _buildingDetailRoot.gameObject.SetActive(true);
 
-            _buildingPortrait.sprite = building.Icon != null ? building.Icon : _factory.SolidSprite;
+            _buildingPortrait.sprite = building.Icon != null
+                ? _factory.DisplaySprite(building.Icon, building.IconContentRect)
+                : _factory.SolidSprite;
             _buildingPortrait.color = building.Icon != null ? Color.white : HudViewFactory.MutedTextColor;
             _buildingName.text = building.DisplayName;
             _buildingDescription.text = building.Description;
@@ -367,8 +373,11 @@ namespace Panteon.UI
                     var icon = button.transform.Find("Icon")?.GetComponent<Image>();
                     if (icon != null)
                     {
-                        icon.sprite = definition.Icon != null ? definition.Icon : _factory.SolidSprite;
+                        icon.sprite = definition.Icon != null
+                            ? _factory.DisplaySprite(definition.Icon, definition.IconContentRect)
+                            : _factory.SolidSprite;
                         icon.color = definition.Icon != null ? Color.white : HudViewFactory.MutedTextColor;
+                        HudViewFactory.SetButtonIconScale(button, 2f * definition.ProductionIconScale);
                     }
                     var label = button.transform.Find("Label")?.GetComponent<Text>();
                     if (label != null) label.text = definition.DisplayName;

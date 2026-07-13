@@ -12,12 +12,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 32223fed1fddc384e8406ae36c8bb375, type: 3}
   m_Name: SO_Soldier1
   m_EditorClassIdentifier: 
-  _displayName: Soldier 1
-  _description: Soldier for Desert
-  _icon: {fileID: 21300000, guid: 7449c5976476a6b498e3a242eb9a4194, type: 3}
+  _displayName: Warrior
+  _description: Durable frontline fighter with alternating sword attacks
+  _icon: {fileID: 7384290322352760091, guid: 63555c658eb534f48acbb1ba682fbec3, type: 3}
+  _iconContentRect:
+    x: 0.3229167
+    y: 0.2864583
+    width: 0.4114583
+    height: 0.4635417
   _prefab: {fileID: 5192142094913200022, guid: e5f341cb7cdebe845a83a3a0df45b93b, type: 3}
-  _maxHP: 10
-  _attackDamage: 10
+  _visualProfile: {fileID: 11400000, guid: 704fcdcf4fb74ef6a39b2ddf8f7fe201, type: 2}
+  _maxHP: 24
+  _attackDamage: 8
   _moveSpeed: 3
-  _attackRange: 1
-  _attackCooldown: 1
+  _attackRangeType: 0
+  _rangedAttackRange: 4
+  _attackCooldown: 0.8
