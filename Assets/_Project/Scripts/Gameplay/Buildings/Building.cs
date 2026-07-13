@@ -16,6 +16,7 @@ namespace Panteon.Gameplay.Buildings
 
         public BuildingDefinitionSO Definition { get; private set; }
         public string DisplayName => Definition.DisplayName;
+        public string Description => Definition.Description;
         public Sprite Icon => Definition.Icon;
         public bool CanProduce => _production != null && _production.HasProducts;
         public System.Collections.Generic.IReadOnlyList<UnitDefinitionSO> Producibles => _production != null ? _production.Producibles : Definition.Producibles;

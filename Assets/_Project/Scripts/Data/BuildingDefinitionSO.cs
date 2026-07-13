@@ -7,6 +7,7 @@ namespace Panteon.Data
     public sealed class BuildingDefinitionSO : ScriptableObject
     {
         [SerializeField] private string _displayName = "Building";
+        [SerializeField] private string _description = "Faction building";
         [SerializeField] private Sprite _icon;
         [SerializeField] private GameObject _prefab;
         [SerializeField] private Vector2Int _footprintSize = Vector2Int.one;
@@ -16,6 +17,7 @@ namespace Panteon.Data
         [SerializeField] private Vector2Int _spawnPointOffset = new Vector2Int(0, -1);
 
         public string DisplayName => _displayName;
+        public string Description => _description;
         public Sprite Icon => _icon;
         public GameObject Prefab => _prefab;
         public Vector2Int FootprintSize => _footprintSize;

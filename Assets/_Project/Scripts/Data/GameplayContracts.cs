@@ -19,6 +19,7 @@ namespace Panteon.Data
 
     public interface IProductionBuilding : IEntityPresentation
     {
+        string Description { get; }
         bool CanProduce { get; }
         IReadOnlyList<UnitDefinitionSO> Producibles { get; }
         bool TryGetSpawnCell(out Vector2Int cell);
