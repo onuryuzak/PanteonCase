@@ -11,6 +11,7 @@ namespace Panteon.UI
         private const int ColumnCount = 2;
         private readonly HudViewFactory _factory;
         private readonly RectTransform _panel;
+        private readonly Image _titlePlate;
         private readonly Text _title;
         private readonly Text _subtitle;
         private readonly RectTransform _scroll;
@@ -30,12 +31,15 @@ namespace Panteon.UI
         {
             _factory = factory;
             _panel = factory.Panel(root, "ProductionPanel", HudViewFactory.PanelColor);
-            _title = factory.Text(_panel, "ProductionTitle", "PRODUCTION MENU", 16, FontStyle.Bold, TextAnchor.MiddleLeft, HudViewFactory.TextColor);
+            _titlePlate = factory.Image(_panel, "ProductionTitlePlate", HudViewFactory.HeaderColor);
+            factory.StyleRounded(_titlePlate);
+            _title = factory.Text(_titlePlate.transform, "ProductionTitle", "Production", 16, FontStyle.Bold, TextAnchor.MiddleCenter, HudViewFactory.TextColor);
             _subtitle = factory.Text(_panel, "ProductionSubtitle", "Infinite Scrollview", 11, FontStyle.Normal, TextAnchor.MiddleLeft, HudViewFactory.MutedTextColor);
+            _subtitle.gameObject.SetActive(false);
             _scroll = HudViewFactory.CreateRect("ProductionScroll", _panel);
             var background = _scroll.gameObject.AddComponent<Image>();
             background.sprite = factory.SolidSprite;
-            background.color = HudViewFactory.CardColor;
+            background.color = Color.clear;
             _scrollRect = _scroll.gameObject.AddComponent<ScrollRect>();
             _scrollRect.horizontal = false;
             _scrollRect.movementType = ScrollRect.MovementType.Clamped;
@@ -51,6 +55,7 @@ namespace Panteon.UI
             _scrollRect.viewport = _viewport;
             _scrollRect.content = _content;
             _status = factory.Text(_panel, "Status", string.Empty, 11, FontStyle.Normal, TextAnchor.MiddleLeft, HudViewFactory.MutedTextColor);
+            _status.gameObject.SetActive(false);
         }
 
         public void SetBuildings(IEnumerable<BuildingDefinitionSO> buildings)
@@ -67,16 +72,20 @@ namespace Panteon.UI
         public void Layout(Rect rect)
         {
             HudViewFactory.SetRect(_panel, rect);
-            HudViewFactory.SetRect(_title.rectTransform, _factory.ScaledRect(14f, 16f, rect.width - _factory.Scaled(28f), 28f));
-            HudViewFactory.SetRect(_subtitle.rectTransform, _factory.ScaledRect(14f, 46f, rect.width - _factory.Scaled(28f), 22f));
-            HudViewFactory.SetRect(_scroll, _factory.ScaledRect(10f, 84f, rect.width - _factory.Scaled(20f), rect.height - _factory.Scaled(138f)));
-            HudViewFactory.SetRect(_viewport, new Rect(0f, 0f, rect.width - _factory.Scaled(20f), rect.height - _factory.Scaled(138f)));
-            HudViewFactory.SetRect(_status.rectTransform, new Rect(_factory.Scaled(12f), rect.height - _factory.Scaled(44f), rect.width - _factory.Scaled(24f), _factory.Scaled(28f)));
+            var horizontalMargin = _factory.Scaled(12f);
+            var titleHeight = _factory.Scaled(28f);
+            var scrollY = _factory.Scaled(62f);
+            var scrollWidth = rect.width - horizontalMargin * 2f;
+            var scrollHeight = rect.height - scrollY - _factory.Scaled(12f);
+            HudViewFactory.SetRect(_titlePlate.rectTransform, new Rect(horizontalMargin, _factory.Scaled(12f), scrollWidth, titleHeight));
+            HudViewFactory.SetRect(_title.rectTransform, new Rect(0f, 0f, scrollWidth, titleHeight));
+            HudViewFactory.SetRect(_scroll, new Rect(horizontalMargin, scrollY, scrollWidth, scrollHeight));
+            HudViewFactory.SetRect(_viewport, new Rect(0f, 0f, scrollWidth, scrollHeight));
 
-            var cell = Mathf.Max(_factory.Scaled(42f), Mathf.Min(_factory.Scaled(64f), (rect.width - _factory.Scaled(48f)) * 0.5f));
-            _buttonSize = new Vector2(cell, cell + _factory.Scaled(18f));
             _spacing = _factory.Scaled(8f);
-            _padding = Mathf.Round(_factory.Scaled(8f));
+            _padding = Mathf.Round(_factory.Scaled(6f));
+            var cell = Mathf.Max(_factory.Scaled(42f), (scrollWidth - _padding * 2f - _spacing) * 0.5f);
+            _buttonSize = new Vector2(cell, cell + _factory.Scaled(12f));
             var rows = Mathf.Max(1, Mathf.CeilToInt(_buildings.Count / (float)ColumnCount));
             var contentHeight = _padding * 2f + rows * (_buttonSize.y + _spacing) - _spacing;
             _content.sizeDelta = new Vector2(0f, Mathf.Max(1f, contentHeight));
@@ -91,6 +100,9 @@ namespace Panteon.UI
                     _padding + row * (_buttonSize.y + _spacing),
                     _buttonSize.x, _buttonSize.y));
                 _factory.LayoutButton(_buttons[i]);
+                if (i < _buildings.Count)
+                    _factory.LayoutButtonIconByContentHeight(
+                        _buttons[i], _buildings[i].Icon, _buildings[i].VisualContentRect);
             }
         }
 
@@ -103,7 +115,7 @@ namespace Panteon.UI
             foreach (var building in _buildings)
             {
                 var definition = building;
-                var button = _factory.Button(_content, definition.DisplayName, definition.Icon, definition.VisualContentRect);
+                var button = _factory.Button(_content, definition.DisplayName, definition.Icon);
                 button.onClick.AddListener(() => BuildingRequested?.Invoke(definition));
                 _buttons.Add(button);
             }

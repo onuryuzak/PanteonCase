@@ -288,6 +288,7 @@ MonoBehaviour:
   _selectableMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  _dragThreshold: 8
 --- !u!1 &533287294
 GameObject:
   m_ObjectHideFlags: 0
@@ -508,7 +509,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: -20
   m_Sprite: {fileID: 21300000, guid: 678b494fc14783844990aac83cb4095a, type: 3}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Color: {r: 0.227451, g: 0.3372549, b: 0.21568629, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
@@ -889,6 +890,8 @@ MonoBehaviour:
   _gridOrigin: {x: -12, y: -8}
   _cellSize: 1
   _boardPaddingPercent: 0.02
+  _regularFont: {fileID: 12800000, guid: b71b3986f9c80264fb2e15e6b58233c5, type: 3}
+  _boldFont: {fileID: 12800000, guid: b9be817ea77ec144dabaacbe028be004, type: 3}
 --- !u!4 &1848523969
 Transform:
   m_ObjectHideFlags: 0

@@ -18,6 +18,8 @@ namespace Panteon.UI
         [SerializeField] private Vector2 _gridOrigin = new Vector2(-12f, -8f);
         [SerializeField, Min(0.1f)] private float _cellSize = 1f;
         [SerializeField, Min(0f)] private float _boardPaddingPercent = 0.02f;
+        [SerializeField] private Font _regularFont;
+        [SerializeField] private Font _boldFont;
 
         private readonly List<BuildingDefinitionSO> _buildings = new List<BuildingDefinitionSO>();
         private readonly List<IEntityPresentation> _selectedUnits = new List<IEntityPresentation>();
@@ -26,7 +28,6 @@ namespace Panteon.UI
         private IDamageable _selected;
         private IProductionBuilding _selectedBuilding;
         private HudViewFactory _viewFactory;
-        private HudChromeView _chromeView;
         private ProductionMenuView _productionView;
         private InformationPanelView _informationView;
         private BoardViewportController _boardViewport;
@@ -82,9 +83,8 @@ namespace Panteon.UI
 
         private void BuildViews()
         {
-            _viewFactory = new HudViewFactory();
+            _viewFactory = new HudViewFactory(_regularFont, _boldFont);
             var root = _viewFactory.CreateHudRoot();
-            _chromeView = new HudChromeView(root, _viewFactory);
             _productionView = new ProductionMenuView(root, _viewFactory);
             _informationView = new InformationPanelView(root, _viewFactory);
             _informationView.PrewarmProductionButtons(GetMaximumProductionButtonCount());
@@ -193,7 +193,6 @@ namespace Panteon.UI
 
             var layout = HudLayout.Calculate(Screen.width, Screen.height, scale);
             _boardRect = layout.Board;
-            _chromeView.Layout(layout.Notes, layout.BoardHeader);
             _productionView.Layout(layout.Production);
             _informationView.Layout(layout.Information);
         }

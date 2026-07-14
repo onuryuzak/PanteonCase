@@ -16,7 +16,7 @@ MonoBehaviour:
   _description: Stores supplies for your faction
   _icon: {fileID: 21300000, guid: f64d3993d34d4410e83e766d40059c1b, type: 3}
   _prefab: {fileID: 5374815226957973616, guid: 0697da14bbc73a4448ed67ace1297902, type: 3}
-  _footprintSize: {x: 3, y: 2}
+  _footprintSize: {x: 2, y: 2}
   _visualContentRect:
     serializedVersion: 2
     x: 0.0625

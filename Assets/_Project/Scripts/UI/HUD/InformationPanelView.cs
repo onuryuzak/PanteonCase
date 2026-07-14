@@ -11,6 +11,7 @@ namespace Panteon.UI
     {
         private readonly HudViewFactory _factory;
         private readonly RectTransform _panel;
+        private readonly Image _headerPlate;
         private readonly Text _header;
         private readonly Text _title;
         private readonly Text _subtitle;
@@ -48,12 +49,15 @@ namespace Panteon.UI
         private readonly Image _productionTitlePlate;
         private int _visibleUnitCount;
         private Rect _lastRect;
+        private Rect _buildingPortraitContentRect = new Rect(0f, 0f, 1f, 1f);
 
         public InformationPanelView(RectTransform root, HudViewFactory factory)
         {
             _factory = factory;
             _panel = factory.Panel(root, "InformationPanel", HudViewFactory.PanelColor);
-            _header = factory.Text(_panel, "InfoHeader", "Information", 18, FontStyle.Bold, TextAnchor.MiddleLeft, HudViewFactory.TextColor);
+            _headerPlate = factory.Image(_panel, "InfoHeaderPlate", HudViewFactory.HeaderColor);
+            factory.StyleRounded(_headerPlate);
+            _header = factory.Text(_headerPlate.transform, "InfoHeader", "Information", 18, FontStyle.Bold, TextAnchor.MiddleCenter, HudViewFactory.TextColor);
             _title = factory.Text(_panel, "InfoTitle", string.Empty, 14, FontStyle.Bold, TextAnchor.MiddleLeft, HudViewFactory.TextColor);
             _subtitle = factory.Text(_panel, "InfoSubtitle", string.Empty, 11, FontStyle.Normal, TextAnchor.MiddleLeft, HudViewFactory.MutedTextColor);
             _preview = factory.Image(_panel, "InfoPreview", HudViewFactory.CardColor);
@@ -90,24 +94,31 @@ namespace Panteon.UI
             portraitMask.showMaskGraphic = false;
             _unitPortraitIcon = factory.Image(_unitPortraitMask, "Portrait", Color.white);
             _unitPortraitIcon.preserveAspect = true;
-            _unitNamePlate = factory.Image(_unitDetailRoot, "NamePlate", new Color(0.46f, 0.44f, 0.34f, 1f));
+            _unitNamePlate = factory.Image(_unitDetailRoot, "NamePlate", HudViewFactory.PlateColor);
+            factory.StyleRounded(_unitNamePlate);
             _unitName = factory.Text(_unitNamePlate.transform, "Name", string.Empty, 12, FontStyle.Bold, TextAnchor.MiddleCenter, HudViewFactory.TextColor);
             _unitDescriptionPlate = factory.Image(_unitDetailRoot, "DescriptionPlate", new Color(0.07f, 0.08f, 0.1f, 0.48f));
+            factory.StyleRounded(_unitDescriptionPlate);
             _unitDescription = factory.Text(_unitDescriptionPlate.transform, "Description", string.Empty, 11, FontStyle.Normal, TextAnchor.UpperLeft, HudViewFactory.TextColor);
             _unitHealthStat = factory.Text(_unitDetailRoot, "HealthStat", string.Empty, 13, FontStyle.Bold, TextAnchor.MiddleLeft, new Color(0.95f, 0.35f, 0.35f, 1f));
             _unitAttackStat = factory.Text(_unitDetailRoot, "AttackStat", string.Empty, 13, FontStyle.Bold, TextAnchor.MiddleLeft, new Color(0.75f, 0.76f, 0.68f, 1f));
 
             _buildingDetailRoot = HudViewFactory.CreateRect("BuildingDetails", _panel);
-            _buildingPortraitFrame = factory.Image(_buildingDetailRoot, "PortraitFrame", new Color(0.48f, 0.48f, 0.39f, 1f));
+            _buildingPortraitFrame = factory.Image(_buildingDetailRoot, "PortraitFrame", HudViewFactory.PlateColor);
+            factory.StyleRounded(_buildingPortraitFrame);
+            _buildingPortraitFrame.gameObject.AddComponent<RectMask2D>();
             _buildingPortrait = factory.Image(_buildingPortraitFrame.transform, "Portrait", Color.white);
-            _buildingPortrait.preserveAspect = true;
-            _buildingNamePlate = factory.Image(_buildingDetailRoot, "NamePlate", new Color(0.46f, 0.44f, 0.34f, 1f));
+            _buildingPortrait.preserveAspect = false;
+            _buildingNamePlate = factory.Image(_buildingDetailRoot, "NamePlate", HudViewFactory.PlateColor);
+            factory.StyleRounded(_buildingNamePlate);
             _buildingName = factory.Text(_buildingNamePlate.transform, "Name", string.Empty, 12, FontStyle.Bold, TextAnchor.MiddleCenter, HudViewFactory.TextColor);
             _buildingDescriptionPlate = factory.Image(_buildingDetailRoot, "DescriptionPlate", new Color(0.07f, 0.08f, 0.1f, 0.48f));
+            factory.StyleRounded(_buildingDescriptionPlate);
             _buildingDescription = factory.Text(_buildingDescriptionPlate.transform, "Description", string.Empty, 11, FontStyle.Normal, TextAnchor.UpperLeft, HudViewFactory.TextColor);
             _buildingHealthStat = factory.Text(_buildingDetailRoot, "HealthStat", string.Empty, 13, FontStyle.Bold, TextAnchor.MiddleCenter, new Color(0.95f, 0.35f, 0.35f, 1f));
             _buildingSeparator = factory.Image(_buildingDetailRoot, "Separator", HudViewFactory.TextColor);
-            _productionTitlePlate = factory.Image(_productionRoot, "TitlePlate", new Color(0.46f, 0.44f, 0.34f, 1f));
+            _productionTitlePlate = factory.Image(_productionRoot, "TitlePlate", HudViewFactory.PlateColor);
+            factory.StyleRounded(_productionTitlePlate);
             _productionTitle.rectTransform.SetParent(_productionTitlePlate.transform, false);
             ShowEmpty();
         }
@@ -115,20 +126,18 @@ namespace Panteon.UI
         public void ShowEmpty()
         {
             HideProductionButtons();
-            _title.text = "NOTHING SELECTED";
-            _subtitle.text = "Select a soldier or building.";
-            _preview.sprite = _factory.SolidSprite;
-            _preview.color = HudViewFactory.CardColor;
-            _preview.gameObject.SetActive(true);
-            _hp.gameObject.SetActive(true);
+            _title.text = string.Empty;
+            _subtitle.text = string.Empty;
             _hp.text = string.Empty;
+            _title.gameObject.SetActive(false);
+            _subtitle.gameObject.SetActive(false);
+            _preview.gameObject.SetActive(false);
+            _hp.gameObject.SetActive(false);
             _productionRoot.gameObject.SetActive(false);
             HideUnitRows();
             _unitListRoot.gameObject.SetActive(false);
             _unitDetailRoot.gameObject.SetActive(false);
             _buildingDetailRoot.gameObject.SetActive(false);
-            _title.gameObject.SetActive(true);
-            _subtitle.gameObject.SetActive(true);
         }
 
         public void Show(IDamageable selected, IProductionBuilding building, Action<IProductionBuilding, UnitDefinitionSO> requestProduction)
@@ -252,13 +261,14 @@ namespace Panteon.UI
             _hp.gameObject.SetActive(false);
             _buildingDetailRoot.gameObject.SetActive(true);
 
-            _buildingPortrait.sprite = building.Icon != null
-                ? _factory.DisplaySprite(building.Icon, building.IconContentRect)
-                : _factory.SolidSprite;
+            _buildingPortrait.sprite = building.Icon != null ? building.Icon : _factory.SolidSprite;
+            _buildingPortraitContentRect = building.Icon != null
+                ? building.IconContentRect
+                : new Rect(0f, 0f, 1f, 1f);
             _buildingPortrait.color = building.Icon != null ? Color.white : HudViewFactory.MutedTextColor;
             _buildingName.text = building.DisplayName;
             _buildingDescription.text = building.Description;
-            _buildingHealthStat.text = $"HP  {building.CurrentHP} / {building.MaxHP}";
+            _buildingHealthStat.text = $"\u2665  {building.CurrentHP}";
 
             _productionRoot.gameObject.SetActive(building.CanProduce);
             if (building.CanProduce) BindProductionButtons(building, requestProduction);
@@ -269,7 +279,9 @@ namespace Panteon.UI
         {
             _lastRect = rect;
             HudViewFactory.SetRect(_panel, rect);
-            HudViewFactory.SetRect(_header.rectTransform, _factory.ScaledRect(16f, 18f, rect.width - _factory.Scaled(32f), 28f));
+            var headerRect = _factory.ScaledRect(12f, 12f, rect.width - _factory.Scaled(24f), 28f);
+            HudViewFactory.SetRect(_headerPlate.rectTransform, headerRect);
+            HudViewFactory.SetRect(_header.rectTransform, new Rect(0f, 0f, headerRect.width, headerRect.height));
             HudViewFactory.SetRect(_title.rectTransform, _factory.ScaledRect(16f, 96f, rect.width - _factory.Scaled(32f), 26f));
             HudViewFactory.SetRect(_subtitle.rectTransform, _factory.ScaledRect(16f, 122f, rect.width - _factory.Scaled(32f), 20f));
             HudViewFactory.SetRect(_preview.rectTransform, _factory.ScaledRect(18f, 158f, rect.width - _factory.Scaled(36f), 72f));
@@ -295,7 +307,11 @@ namespace Panteon.UI
             HudViewFactory.SetRect(_buildingDetailRoot, new Rect(_factory.Scaled(16f), _factory.Scaled(70f), detailWidth, rect.height - _factory.Scaled(88f)));
             var buildingPreviewHeight = Mathf.Min(detailWidth * 0.94f, _factory.Scaled(154f));
             HudViewFactory.SetRect(_buildingPortraitFrame.rectTransform, new Rect(_factory.Scaled(4f), 0f, detailWidth - _factory.Scaled(8f), buildingPreviewHeight));
-            HudViewFactory.SetRect(_buildingPortrait.rectTransform, new Rect(_factory.Scaled(6f), _factory.Scaled(6f), detailWidth - _factory.Scaled(20f), buildingPreviewHeight - _factory.Scaled(12f)));
+            var buildingPortraitBounds = new Rect(_factory.Scaled(6f), _factory.Scaled(6f),
+                detailWidth - _factory.Scaled(20f), buildingPreviewHeight - _factory.Scaled(12f));
+            var fittedBuildingPortrait = HudViewFactory.FitSpriteContentByHeight(
+                _buildingPortrait.sprite, _buildingPortraitContentRect, buildingPortraitBounds);
+            HudViewFactory.SetRect(_buildingPortrait.rectTransform, fittedBuildingPortrait);
             var buildingNameY = buildingPreviewHeight + _factory.Scaled(10f);
             HudViewFactory.SetRect(_buildingNamePlate.rectTransform, new Rect(_factory.Scaled(4f), buildingNameY, detailWidth - _factory.Scaled(8f), _factory.Scaled(28f)));
             HudViewFactory.SetRect(_buildingName.rectTransform, new Rect(0f, 0f, detailWidth - _factory.Scaled(8f), _factory.Scaled(28f)));
@@ -393,6 +409,7 @@ namespace Panteon.UI
             while (_buttons.Count < requiredCount)
             {
                 var button = _factory.Button(_productionContent, string.Empty, null);
+                HudViewFactory.SetButtonLabelSingleLine(button);
                 button.gameObject.SetActive(false);
                 _buttons.Add(button);
             }

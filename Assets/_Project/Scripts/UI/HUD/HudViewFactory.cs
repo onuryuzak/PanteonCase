@@ -7,24 +7,34 @@ namespace Panteon.UI
 {
     internal sealed class HudViewFactory
     {
-        public static readonly Color PanelColor = new Color(0.08f, 0.1f, 0.14f, 0.96f);
-        public static readonly Color CardColor = new Color(0.16f, 0.19f, 0.24f, 0.98f);
-        public static readonly Color AccentColor = new Color(0.25f, 0.67f, 0.95f, 1f);
-        public static readonly Color TextColor = new Color(0.95f, 0.97f, 1f, 1f);
-        public static readonly Color MutedTextColor = new Color(0.7f, 0.76f, 0.84f, 1f);
+        public static readonly Color PanelColor = new Color32(43, 43, 43, 255);
+        public static readonly Color CardColor = new Color32(61, 61, 58, 255);
+        public static readonly Color HeaderColor = new Color32(74, 91, 73, 255);
+        public static readonly Color PlateColor = new Color32(111, 108, 91, 255);
+        public static readonly Color BorderColor = new Color32(118, 115, 96, 255);
+        public static readonly Color AccentColor = new Color32(92, 111, 82, 255);
+        public static readonly Color DangerColor = new Color32(190, 70, 70, 255);
+        public static readonly Color TextColor = new Color32(246, 244, 238, 255);
+        public static readonly Color MutedTextColor = new Color32(205, 202, 190, 255);
 
         private readonly Dictionary<Text, int> _baseTextSizes = new Dictionary<Text, int>();
         private readonly Dictionary<string, Sprite> _displaySprites = new Dictionary<string, Sprite>();
-        private readonly Font _font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        private readonly Font _fallbackFont = Resources.GetBuiltinResource<Font>("Arial.ttf");
+        private readonly Font _regularFont;
+        private readonly Font _boldFont;
         private readonly Texture2D _solidTexture;
         private readonly Texture2D _circleTexture;
+        private readonly Texture2D _roundedTexture;
 
         public Sprite SolidSprite { get; }
         public Sprite CircleSprite { get; }
+        public Sprite RoundedSprite { get; }
         public float Scale { get; private set; } = 1f;
 
-        public HudViewFactory()
+        public HudViewFactory(Font regularFont, Font boldFont)
         {
+            _regularFont = regularFont != null ? regularFont : _fallbackFont;
+            _boldFont = boldFont != null ? boldFont : _regularFont;
             _solidTexture = new Texture2D(1, 1, TextureFormat.RGBA32, false)
             {
                 filterMode = FilterMode.Point,
@@ -37,6 +47,9 @@ namespace Panteon.UI
 
             _circleTexture = CreateCircleTexture(64);
             CircleSprite = Sprite.Create(_circleTexture, new Rect(0f, 0f, 64f, 64f), Vector2.one * 0.5f, 64f);
+            _roundedTexture = CreateRoundedRectTexture(32, 8);
+            RoundedSprite = Sprite.Create(_roundedTexture, new Rect(0f, 0f, 32f, 32f),
+                Vector2.one * 0.5f, 32f, 0, SpriteMeshType.FullRect, new Vector4(8f, 8f, 8f, 8f));
         }
 
         public RectTransform CreateHudRoot()
@@ -83,12 +96,22 @@ namespace Panteon.UI
             return image;
         }
 
+        public void StyleRounded(Image image)
+        {
+            if (image == null) return;
+            image.sprite = RoundedSprite;
+            image.type = UnityEngine.UI.Image.Type.Sliced;
+        }
+
         public Text Text(Transform parent, string name, string value, int size, FontStyle style, TextAnchor anchor, Color color)
         {
             var label = CreateRect(name, parent).gameObject.AddComponent<Text>();
-            label.font = _font;
+            var wantsBold = style == FontStyle.Bold || style == FontStyle.BoldAndItalic;
+            var selectedFont = wantsBold ? _boldFont : _regularFont;
+            label.font = selectedFont != null ? selectedFont : _fallbackFont;
             label.text = value;
-            label.fontStyle = style;
+            var wantsItalic = style == FontStyle.Italic || style == FontStyle.BoldAndItalic;
+            label.fontStyle = label.font == _fallbackFont ? style : wantsItalic ? FontStyle.Italic : FontStyle.Normal;
             label.alignment = anchor;
             label.color = color;
             label.horizontalOverflow = HorizontalWrapMode.Wrap;
@@ -102,13 +125,18 @@ namespace Panteon.UI
         {
             var rect = CreateRect(string.IsNullOrWhiteSpace(label) ? "Button" : label.Replace(" ", string.Empty), parent);
             var image = rect.gameObject.AddComponent<Image>();
-            image.sprite = SolidSprite;
+            image.sprite = RoundedSprite;
+            image.type = UnityEngine.UI.Image.Type.Sliced;
             image.color = CardColor;
             rect.gameObject.AddComponent<RectMask2D>();
+            var outline = rect.gameObject.AddComponent<Outline>();
+            outline.effectColor = BorderColor;
+            outline.effectDistance = new Vector2(Scaled(2f), -Scaled(2f));
+            outline.useGraphicAlpha = true;
             var button = rect.gameObject.AddComponent<Button>();
             var colors = button.colors;
             colors.normalColor = CardColor;
-            colors.highlightedColor = new Color(0.22f, 0.28f, 0.36f, 1f);
+            colors.highlightedColor = new Color32(79, 82, 72, 255);
             colors.pressedColor = AccentColor;
             button.colors = colors;
 
@@ -150,8 +178,39 @@ namespace Panteon.UI
             label.anchorMin = new Vector2(0f, 0f);
             label.anchorMax = new Vector2(1f, 0f);
             label.pivot = new Vector2(0.5f, 0f);
-            label.anchoredPosition = new Vector2(0f, Scaled(4f));
-            label.sizeDelta = new Vector2(-Scaled(8f), Scaled(22f));
+            label.anchoredPosition = new Vector2(0f, Scaled(2f));
+            label.sizeDelta = new Vector2(-Scaled(2f), Scaled(26f));
+        }
+
+        public static void SetButtonLabelSingleLine(Button button)
+        {
+            if (button == null) return;
+            var label = button.transform.Find("Label")?.GetComponent<Text>();
+            if (label == null) return;
+            label.horizontalOverflow = HorizontalWrapMode.Overflow;
+            label.verticalOverflow = VerticalWrapMode.Truncate;
+        }
+
+        public void LayoutButtonIconByContentHeight(Button button, Sprite sprite, Rect normalizedContentRect)
+        {
+            if (button == null || sprite == null) return;
+            var icon = button.transform.Find("Icon")?.GetComponent<Image>();
+            if (icon == null) return;
+
+            var buttonRect = (RectTransform)button.transform;
+            var topInset = Mathf.Max(2f, buttonRect.rect.height * 0.06f);
+            var labelSpace = Mathf.Max(Scaled(20f), buttonRect.rect.height * 0.28f);
+            var horizontalInset = buttonRect.rect.width * 0.09f;
+            var bounds = new Rect(
+                horizontalInset,
+                topInset,
+                buttonRect.rect.width - horizontalInset * 2f,
+                Mathf.Max(1f, buttonRect.rect.height - topInset - labelSpace));
+
+            icon.sprite = sprite;
+            icon.preserveAspect = false;
+            icon.rectTransform.localScale = Vector3.one;
+            SetRect(icon.rectTransform, FitSpriteContentByHeight(sprite, normalizedContentRect, bounds));
         }
 
         public float Scaled(float value) => value * Scale;
@@ -206,6 +265,28 @@ namespace Panteon.UI
             target.sizeDelta = rect.size;
         }
 
+        public static Rect FitSpriteContentByHeight(Sprite sprite, Rect normalizedContentRect, Rect bounds)
+        {
+            if (sprite == null || bounds.width <= 0f || bounds.height <= 0f || sprite.rect.height <= 0f)
+                return bounds;
+
+            var content = ClampNormalizedRect(normalizedContentRect);
+            var height = bounds.height / content.height;
+            var width = height * sprite.rect.width / sprite.rect.height;
+            var contentCenter = content.center;
+            var contentOffset = new Vector2(
+                (contentCenter.x - 0.5f) * width,
+                (0.5f - contentCenter.y) * height);
+            var boundsCenter = bounds.center;
+            var imageCenter = boundsCenter - contentOffset;
+
+            return new Rect(
+                imageCenter.x - width * 0.5f,
+                imageCenter.y - height * 0.5f,
+                width,
+                height);
+        }
+
         public void Dispose()
         {
             foreach (var sprite in _displaySprites.Values)
@@ -215,6 +296,8 @@ namespace Panteon.UI
             if (_solidTexture != null) Object.Destroy(_solidTexture);
             if (CircleSprite != null) Object.Destroy(CircleSprite);
             if (_circleTexture != null) Object.Destroy(_circleTexture);
+            if (RoundedSprite != null) Object.Destroy(RoundedSprite);
+            if (_roundedTexture != null) Object.Destroy(_roundedTexture);
         }
 
         private static Rect ClampNormalizedRect(Rect rect)
@@ -245,6 +328,31 @@ namespace Panteon.UI
                 pixels[y * size + x] = dx * dx + dy * dy <= radiusSquared ? Color.white : Color.clear;
             }
             texture.SetPixels(pixels);
+            texture.Apply(false, true);
+            return texture;
+        }
+
+        private static Texture2D CreateRoundedRectTexture(int size, int radius)
+        {
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.HideAndDontSave
+            };
+            var pixels = new Color32[size * size];
+            var corner = radius - 0.5f;
+            var radiusSquared = corner * corner;
+            for (var y = 0; y < size; y++)
+            for (var x = 0; x < size; x++)
+            {
+                var dx = x < radius ? corner - x : x >= size - radius ? x - (size - radius) - corner : 0f;
+                var dy = y < radius ? corner - y : y >= size - radius ? y - (size - radius) - corner : 0f;
+                pixels[y * size + x] = dx * dx + dy * dy <= radiusSquared
+                    ? new Color32(255, 255, 255, 255)
+                    : new Color32(255, 255, 255, 0);
+            }
+            texture.SetPixels32(pixels);
             texture.Apply(false, true);
             return texture;
         }

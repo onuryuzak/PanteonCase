@@ -4,6 +4,10 @@ namespace Panteon.UI
 {
     internal sealed class BoardViewportController
     {
+        private static readonly Color BoardBackground = new Color32(42, 70, 45, 255);
+        private static readonly Color32 CellColor = new Color32(48, 80, 51, 255);
+        private static readonly Color32 CellShadowColor = new Color32(39, 65, 42, 255);
+
         private readonly Camera _camera;
         private readonly Vector2Int _gridSize;
         private readonly Vector2 _gridOrigin;
@@ -38,7 +42,7 @@ namespace Panteon.UI
                 board.width / Screen.width, board.height / Screen.height);
             _camera.aspect = board.width / Mathf.Max(1f, board.height);
             _camera.clearFlags = CameraClearFlags.SolidColor;
-            _camera.backgroundColor = Color.white;
+            _camera.backgroundColor = BoardBackground;
             _camera.orthographicSize = Mathf.Max(0.1f, board.height * _cellSize / (2f * pixelsPerCell));
 
             var position = GetPixelAlignedCameraPosition(board, pixelsPerCell);
@@ -84,19 +88,35 @@ namespace Panteon.UI
                 filterMode = FilterMode.Point,
                 wrapMode = TextureWrapMode.Clamp
             };
-            var background = new Color(0.96f, 0.97f, 0.98f, 1f);
-            var line = new Color(0.68f, 0.72f, 0.78f, 1f);
-            var pixels = new Color[width * height];
+            var pixels = new Color32[width * height];
+            var gutter = Mathf.Max(1, Mathf.RoundToInt(pixelsPerCell * 0.055f));
+            var radius = Mathf.Max(1, Mathf.RoundToInt(pixelsPerCell * 0.1f));
+            var innerMax = pixelsPerCell - gutter - 1;
             for (var y = 0; y < height; y++)
             for (var x = 0; x < width; x++)
             {
-                var isLine = x == 0 || y == 0 || x == width - 1 || y == height - 1 ||
-                             x % pixelsPerCell == 0 || y % pixelsPerCell == 0;
-                pixels[y * width + x] = isLine ? line : background;
+                var localX = x % pixelsPerCell;
+                var localY = y % pixelsPerCell;
+                var inside = IsInsideRoundedCell(localX, localY, gutter, innerMax, radius);
+                pixels[y * width + x] = inside ? CellColor : CellShadowColor;
             }
-            _texture.SetPixels(pixels);
+            _texture.SetPixels32(pixels);
             _texture.Apply(false, true);
             return Sprite.Create(_texture, new Rect(0f, 0f, width, height), Vector2.one * 0.5f, pixelsPerCell / _cellSize);
+        }
+
+        private static bool IsInsideRoundedCell(int x, int y, int min, int max, int radius)
+        {
+            if (x < min || y < min || x > max || y > max) return false;
+            var left = min + radius;
+            var right = max - radius;
+            var bottom = min + radius;
+            var top = max - radius;
+            var closestX = Mathf.Clamp(x, left, right);
+            var closestY = Mathf.Clamp(y, bottom, top);
+            var dx = x - closestX;
+            var dy = y - closestY;
+            return dx * dx + dy * dy <= radius * radius;
         }
 
         private Vector2 GetPixelAlignedCameraPosition(Rect board, int pixelsPerCell)
