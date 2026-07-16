@@ -11,9 +11,13 @@ namespace Panteon.UI
         [SerializeField] private RectTransform _boardViewport;
         [SerializeField] private RectTransform _productionPanel;
         [SerializeField] private RectTransform _informationPanel;
+        [SerializeField] private ProductionMenuBindings _productionBindings;
+        [SerializeField] private InformationPanelBindings _informationBindings;
 
         public RectTransform ProductionPanel => _productionPanel;
         public RectTransform InformationPanel => _informationPanel;
+        public ProductionMenuBindings ProductionBindings => _productionBindings;
+        public InformationPanelBindings InformationBindings => _informationBindings;
 
         public Rect GetBoardScreenRect()
         {
@@ -40,7 +44,8 @@ namespace Panteon.UI
 
         private void OnValidate()
         {
-            if (_boardViewport == null || _productionPanel == null || _informationPanel == null)
+            if (_boardViewport == null || _productionPanel == null || _informationPanel == null ||
+                _productionBindings == null || _informationBindings == null)
                 Debug.LogWarning("RuntimeHUD prefab has missing view references.", this);
         }
     }

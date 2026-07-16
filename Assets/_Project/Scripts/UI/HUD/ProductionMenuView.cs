@@ -19,7 +19,7 @@ namespace Panteon.UI
         private readonly RectTransform _content;
         private readonly ScrollRect _scrollRect;
         private readonly Text _status;
-        private readonly List<Button> _buttons = new List<Button>();
+        private readonly List<HudButtonView> _buttons = new List<HudButtonView>();
         private readonly List<BuildingDefinitionSO> _buildings = new List<BuildingDefinitionSO>();
         private Vector2 _buttonSize;
         private float _spacing;
@@ -30,20 +30,20 @@ namespace Panteon.UI
         public ProductionMenuView(RuntimeHudView hud, HudViewFactory factory)
         {
             _factory = factory;
-            _panel = hud.ProductionPanel;
-            _titlePlate = HudViewFactory.Require<Image>(_panel, "ProductionTitlePlate");
-            _title = HudViewFactory.Require<Text>(_panel, "ProductionTitlePlate/ProductionTitle");
-            _subtitle = HudViewFactory.Require<Text>(_panel, "ProductionSubtitle");
-            _scroll = HudViewFactory.Require<RectTransform>(_panel, "ProductionScroll");
-            _scrollRect = HudViewFactory.Require<ScrollRect>(_panel, "ProductionScroll");
-            _viewport = HudViewFactory.Require<RectTransform>(_panel, "ProductionScroll/Viewport");
-            _content = HudViewFactory.Require<RectTransform>(_panel, "ProductionScroll/Viewport/Content");
-            _status = HudViewFactory.Require<Text>(_panel, "Status");
-            for (var i = 0; i < _content.childCount; i++)
-            {
-                var button = _content.GetChild(i).GetComponent<Button>();
-                if (button != null) _buttons.Add(button);
-            }
+            var bindings = hud.ProductionBindings != null
+                ? hud.ProductionBindings
+                : throw new InvalidOperationException("RuntimeHUD production bindings are missing.");
+            bindings.ValidateReferences();
+            _panel = bindings.Root;
+            _titlePlate = bindings.TitlePlate;
+            _title = bindings.Title;
+            _subtitle = bindings.Subtitle;
+            _scroll = bindings.Scroll;
+            _scrollRect = bindings.ScrollRect;
+            _viewport = bindings.Viewport;
+            _content = bindings.Content;
+            _status = bindings.Status;
+            _buttons.AddRange(bindings.Cards);
         }
 
         public void SetBuildings(IEnumerable<BuildingDefinitionSO> buildings)
@@ -83,7 +83,7 @@ namespace Panteon.UI
             {
                 var row = i / ColumnCount;
                 var column = i % ColumnCount;
-                HudViewFactory.SetRect((RectTransform)_buttons[i].transform, new Rect(
+                HudViewFactory.SetRect(_buttons[i].Root, new Rect(
                     _padding + column * (_buttonSize.x + _spacing),
                     _padding + row * (_buttonSize.y + _spacing),
                     _buttonSize.x, _buttonSize.y));
@@ -98,7 +98,7 @@ namespace Panteon.UI
         {
             var scrollWidth = _viewport.rect.width;
             var scrollHeight = _viewport.rect.height;
-            var template = _buttons.Count > 0 ? (RectTransform)_buttons[0].transform : null;
+            var template = _buttons.Count > 0 ? _buttons[0].Root : null;
             _buttonSize = template != null && template.rect.width > 1f && template.rect.height > 1f
                 ? template.rect.size
                 : new Vector2(140f, 140f);
@@ -117,7 +117,7 @@ namespace Panteon.UI
                 if (!active) continue;
                 var row = i / ColumnCount;
                 var column = i % ColumnCount;
-                HudViewFactory.SetRect((RectTransform)_buttons[i].transform, new Rect(
+                HudViewFactory.SetRect(_buttons[i].Root, new Rect(
                     _padding + column * (_buttonSize.x + _spacing),
                     _padding + row * (_buttonSize.y + _spacing),
                     _buttonSize.x, _buttonSize.y));
@@ -133,22 +133,22 @@ namespace Panteon.UI
             for (var i = 0; i < _buttons.Count; i++)
             {
                 var button = _buttons[i];
-                button.onClick.RemoveAllListeners();
+                button.Button.onClick.RemoveAllListeners();
                 var active = i < _buildings.Count;
                 button.gameObject.SetActive(active);
                 if (!active) continue;
                 var building = _buildings[i];
                 var definition = building;
                 button.name = definition.DisplayName.Replace(" ", string.Empty);
-                var label = button.transform.Find("Label")?.GetComponent<Text>();
-                if (label != null) label.text = definition.DisplayName;
-                var icon = button.transform.Find("Icon")?.GetComponent<Image>();
+                var label = button.Label;
+                label.text = definition.DisplayName;
+                var icon = button.Icon;
                 if (icon != null)
                 {
                     icon.sprite = definition.Icon;
                     icon.color = definition.Icon != null ? Color.white : HudViewFactory.MutedTextColor;
                 }
-                button.onClick.AddListener(() => BuildingRequested?.Invoke(definition));
+                button.Button.onClick.AddListener(() => BuildingRequested?.Invoke(definition));
             }
             _content.anchoredPosition = Vector2.zero;
             _scrollRect.verticalNormalizedPosition = 1f;
@@ -158,9 +158,18 @@ namespace Panteon.UI
         private void EnsureButtonPool(int requiredCount)
         {
             if (requiredCount <= _buttons.Count) return;
-            throw new InvalidOperationException(
-                $"RuntimeHUD has {_buttons.Count} building cards but the catalog requires {requiredCount}. " +
-                "Add the required building cards to RuntimeHUD.prefab.");
+            if (_buttons.Count == 0)
+                throw new InvalidOperationException("RuntimeHUD requires at least one authored building card.");
+
+            var template = _buttons[0];
+            while (_buttons.Count < requiredCount)
+            {
+                var card = UnityEngine.Object.Instantiate(template, _content);
+                card.name = $"BuildingCard{_buttons.Count + 1}";
+                card.Button.onClick.RemoveAllListeners();
+                card.gameObject.SetActive(false);
+                _buttons.Add(card);
+            }
         }
     }
 }

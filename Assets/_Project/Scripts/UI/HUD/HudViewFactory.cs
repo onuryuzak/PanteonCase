@@ -1,4 +1,3 @@
-using System;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -24,15 +23,15 @@ namespace Panteon.UI
         public Rect ScaledRect(float x, float y, float width, float height) =>
             new Rect(Scaled(x), Scaled(y), width, Scaled(height));
 
-        public void LayoutButton(Button button)
+        public void LayoutButton(HudButtonView button)
         {
             if (button == null) return;
-            var icon = button.transform.Find("Icon") as RectTransform;
+            var icon = button.Icon != null ? button.Icon.rectTransform : null;
             if (icon != null)
             {
                 icon.anchorMin = icon.anchorMax = new Vector2(0.5f, 1f);
                 icon.pivot = new Vector2(0.5f, 1f);
-                var buttonRect = (RectTransform)button.transform;
+                var buttonRect = button.Root;
                 var topInset = Mathf.Max(2f, buttonRect.rect.height * 0.06f);
                 var labelSpace = Mathf.Max(Scaled(20f), buttonRect.rect.height * 0.28f);
                 var availableWidth = buttonRect.rect.width * 0.82f;
@@ -42,22 +41,23 @@ namespace Panteon.UI
                 icon.sizeDelta = Vector2.one * iconSize;
             }
 
-            var label = button.transform.Find("Label") as RectTransform;
+            var label = button.Label != null ? button.Label.rectTransform : null;
             if (label == null) return;
             label.anchorMin = new Vector2(0f, 0f);
             label.anchorMax = new Vector2(1f, 0f);
             label.pivot = new Vector2(0.5f, 0f);
             label.anchoredPosition = new Vector2(0f, Scaled(2f));
             label.sizeDelta = new Vector2(-Scaled(2f), Scaled(26f));
+            SetButtonLabelSingleLine(button);
         }
 
-        public void LayoutButtonIconByContentHeight(Button button, Sprite sprite, Rect normalizedContentRect)
+        public void LayoutButtonIconByContentHeight(HudButtonView button, Sprite sprite, Rect normalizedContentRect)
         {
             if (button == null || sprite == null) return;
-            var icon = button.transform.Find("Icon")?.GetComponent<Image>();
+            var icon = button.Icon;
             if (icon == null) return;
 
-            var buttonRect = (RectTransform)button.transform;
+            var buttonRect = button.Root;
             var topInset = Mathf.Max(2f, buttonRect.rect.height * 0.06f);
             var labelSpace = Mathf.Max(Scaled(20f), buttonRect.rect.height * 0.28f);
             var horizontalInset = buttonRect.rect.width * 0.09f;
@@ -83,11 +83,12 @@ namespace Panteon.UI
             image.rectTransform.localScale = Vector3.one * Mathf.Max(0.1f, scale * contentScale);
         }
 
-        public static void SetButtonLabelSingleLine(Button button)
+        public static void SetButtonLabelSingleLine(HudButtonView button)
         {
             if (button == null) return;
-            var label = button.transform.Find("Label")?.GetComponent<Text>();
+            var label = button.Label;
             if (label == null) return;
+            label.resizeTextForBestFit = false;
             label.horizontalOverflow = HorizontalWrapMode.Overflow;
             label.verticalOverflow = VerticalWrapMode.Truncate;
         }
@@ -99,19 +100,6 @@ namespace Panteon.UI
             target.pivot = new Vector2(0f, 1f);
             target.anchoredPosition = new Vector2(rect.x, -rect.y);
             target.sizeDelta = rect.size;
-        }
-
-        public static T Require<T>(Transform root, string path) where T : Component
-        {
-            var component = Find<T>(root, path);
-            if (component != null) return component;
-            throw new InvalidOperationException($"RuntimeHUD prefab is missing {typeof(T).Name} at '{path}'.");
-        }
-
-        public static T Find<T>(Transform root, string path) where T : Component
-        {
-            var target = root != null ? root.Find(path) : null;
-            return target != null ? target.GetComponent<T>() : null;
         }
 
         public static Rect FitSpriteContentByHeight(Sprite sprite, Rect normalizedContentRect, Rect bounds)

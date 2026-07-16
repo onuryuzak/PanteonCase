@@ -67,6 +67,7 @@ namespace Panteon.Gameplay.Units
             transform.localScale = Vector3.one;
             StateMachine.ChangeState(UnitState.Idle);
             name = $"UNT_{definition.DisplayName.Replace(" ", string.Empty)}_{GetInstanceID():000}";
+            PlaySpawnFeedback();
         }
 
         public bool MoveTo(Vector2Int destination)
@@ -99,6 +100,7 @@ namespace Panteon.Gameplay.Units
             Health.OnDied -= HandleDied;
             _animatorView?.Release();
             _projectileView?.Stop();
+            ResetFeedback();
         }
 
         private IEnumerator FollowPath(List<Vector2Int> path, Vector2Int destination)
@@ -160,6 +162,7 @@ namespace Panteon.Gameplay.Units
                         yield break;
                     }
 
+                    _pathPreview?.Show(path, _grid);
                     StateMachine.ChangeState(UnitState.Moving);
                     for (var i = 1; i < path.Count; i++)
                     {
@@ -178,6 +181,7 @@ namespace Panteon.Gameplay.Units
                         }
                         transform.position = point;
                         GridPosition = path[i];
+                        _pathPreview?.SetFirstVisibleIndex(i + 1);
                     }
                 }
                 StateMachine.ChangeState(UnitState.Attacking);
@@ -384,7 +388,7 @@ namespace Panteon.Gameplay.Units
             CancelCurrentCommand();
             StateMachine.ChangeState(UnitState.Dead);
             _bus?.Publish(new EntityDied(this));
-            _returnToPool?.Invoke(this);
+            PlayDeathFeedback(() => _returnToPool?.Invoke(this));
         }
     }
 }

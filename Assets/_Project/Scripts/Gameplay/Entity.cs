@@ -27,6 +27,10 @@ namespace Panteon.Gameplay
         protected void BindHealthBar(IDamageable source, bool alwaysVisible = false) =>
             _healthBar?.Bind(source, alwaysVisible);
         protected void BindDamageFeedback(IDamageable source) => _damageFeedback?.Bind(source);
+        protected void PlaySpawnFeedback() => _damageFeedback?.PlaySpawn();
+        protected void PlayRevealSpawnFeedback() => _damageFeedback?.PlayRevealSpawn();
+        protected void PlayDeathFeedback(System.Action completed) => _damageFeedback?.PlayDeath(completed);
+        protected void ResetFeedback() => _damageFeedback?.ResetFeedback();
 
         public virtual void Select()
         {

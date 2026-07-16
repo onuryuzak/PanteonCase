@@ -1,3 +1,5 @@
+using System;
+using System.Collections;
 using Panteon.Core;
 using UnityEngine;
 
@@ -8,6 +10,12 @@ namespace Panteon.Gameplay.Combat
         private ParticleSystem _particles;
         private IDamageable _source;
         private int _lastHp = -1;
+        private Coroutine _visualRoutine;
+        private Transform _visual;
+        private SpriteRenderer _visualRenderer;
+        private Vector3 _restPosition;
+        private Vector3 _restScale;
+        private Color _restColor;
 
         public static DamageFeedbackView Ensure(GameObject owner)
         {
@@ -29,13 +37,49 @@ namespace Panteon.Gameplay.Combat
         public void Bind(IDamageable source)
         {
             Unbind();
+            ResetFeedback();
             _source = source;
             if (_source == null) return;
             _lastHp = _source.CurrentHP;
             _source.OnHealthChanged += HandleHealthChanged;
         }
 
-        private void OnDisable() => Unbind();
+        public void PlaySpawn()
+        {
+            StopVisualRoutine(true);
+            _visualRoutine = StartCoroutine(SpawnRoutine());
+        }
+
+        public void PlayRevealSpawn()
+        {
+            StopVisualRoutine(true);
+            _visualRoutine = StartCoroutine(RevealSpawnRoutine());
+        }
+
+        public void PlayDeath(Action completed)
+        {
+            StopVisualRoutine(true);
+            if (!TryCaptureVisual())
+            {
+                completed?.Invoke();
+                return;
+            }
+
+            _visualRoutine = StartCoroutine(DeathRoutine(completed));
+        }
+
+        public void ResetFeedback()
+        {
+            StopVisualRoutine(true);
+            if (_particles != null)
+                _particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        }
+
+        private void OnDisable()
+        {
+            ResetFeedback();
+            Unbind();
+        }
 
         private void HandleHealthChanged(int current, int max)
         {
@@ -47,6 +91,151 @@ namespace Panteon.Gameplay.Combat
         {
             EnsureParticles();
             _particles.Emit(14);
+            StopVisualRoutine(true);
+            if (TryCaptureVisual()) _visualRoutine = StartCoroutine(HitRoutine());
+        }
+
+        private IEnumerator SpawnRoutine()
+        {
+            // Visual children are configured during entity initialization, after Bind.
+            yield return null;
+            if (!TryCaptureVisual())
+            {
+                _visualRoutine = null;
+                yield break;
+            }
+
+            const float duration = 0.22f;
+            var elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / duration);
+                var scale = t < 0.7f
+                    ? Mathf.Lerp(0.72f, 1.08f, EaseOutBack(t / 0.7f))
+                    : Mathf.Lerp(1.08f, 1f, (t - 0.7f) / 0.3f);
+                _visual.localScale = ScaleFromRest(scale);
+                yield return null;
+            }
+
+            RestoreVisual();
+            _visualRoutine = null;
+        }
+
+        private IEnumerator RevealSpawnRoutine()
+        {
+            // BuildingView finishes configuring its visual later in the creation frame.
+            yield return null;
+            if (!TryCaptureVisual())
+            {
+                _visualRoutine = null;
+                yield break;
+            }
+
+            const float duration = 0.2f;
+            var elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / duration);
+                var eased = 1f - (1f - t) * (1f - t);
+                var revealColor = new Color(0.62f, 1f, 0.78f, _restColor.a * 0.35f);
+                _visualRenderer.color = Color.Lerp(revealColor, _restColor, eased);
+                _visual.localPosition = _restPosition;
+                _visual.localScale = _restScale;
+                yield return null;
+            }
+
+            RestoreVisual();
+            _visualRoutine = null;
+        }
+
+        private IEnumerator HitRoutine()
+        {
+            const float duration = 0.13f;
+            var elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / duration);
+                var strength = 1f - t;
+                var direction = Mathf.Sin(t * Mathf.PI * 4f);
+                _visual.localPosition = _restPosition + Vector3.right * (0.055f * direction * strength);
+                _visual.localScale = ScaleFromRest(1f + 0.08f * Mathf.Sin(t * Mathf.PI));
+                _visualRenderer.color = Color.Lerp(new Color(1f, 0.22f, 0.12f, _restColor.a), _restColor, t);
+                yield return null;
+            }
+
+            RestoreVisual();
+            _visualRoutine = null;
+        }
+
+        private IEnumerator DeathRoutine(Action completed)
+        {
+            const float duration = 0.24f;
+            var elapsed = 0f;
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                var t = Mathf.Clamp01(elapsed / duration);
+                var eased = t * t;
+                _visual.localPosition = _restPosition + Vector3.up * (0.12f * t);
+                _visual.localScale = ScaleFromRest(Mathf.Lerp(1f, 0.25f, eased));
+                var color = _restColor;
+                color.a = Mathf.Lerp(_restColor.a, 0f, eased);
+                _visualRenderer.color = color;
+                yield return null;
+            }
+
+            _visualRoutine = null;
+            completed?.Invoke();
+        }
+
+        private bool TryCaptureVisual()
+        {
+            var owner = transform.parent;
+            if (owner == null) return false;
+            var candidate = owner.Find("TinySwordsVisual") ?? owner.Find("BuildingVisual");
+            var renderer = candidate != null
+                ? candidate.GetComponent<SpriteRenderer>()
+                : owner.GetComponent<SpriteRenderer>();
+            if (renderer == null || !renderer.enabled || !renderer.gameObject.activeInHierarchy) return false;
+
+            _visual = renderer.transform;
+            _visualRenderer = renderer;
+            _restPosition = _visual.localPosition;
+            _restScale = _visual.localScale;
+            _restColor = _visualRenderer.color;
+            return true;
+        }
+
+        private Vector3 ScaleFromRest(float multiplier) => new Vector3(
+            _restScale.x * multiplier,
+            _restScale.y * multiplier,
+            _restScale.z);
+
+        private void StopVisualRoutine(bool restore)
+        {
+            if (_visualRoutine != null) StopCoroutine(_visualRoutine);
+            _visualRoutine = null;
+            if (restore) RestoreVisual();
+        }
+
+        private void RestoreVisual()
+        {
+            if (_visual != null)
+            {
+                _visual.localPosition = _restPosition;
+                _visual.localScale = _restScale;
+            }
+            if (_visualRenderer != null) _visualRenderer.color = _restColor;
+        }
+
+        private static float EaseOutBack(float value)
+        {
+            const float overshoot = 1.70158f;
+            var x = Mathf.Clamp01(value) - 1f;
+            return 1f + (overshoot + 1f) * x * x * x + overshoot * x * x;
         }
 
         private void EnsureParticles()

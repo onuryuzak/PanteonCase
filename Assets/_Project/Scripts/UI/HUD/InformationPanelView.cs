@@ -20,13 +20,14 @@ namespace Panteon.UI
         private readonly RectTransform _productionRoot;
         private readonly Text _productionTitle;
         private readonly RectTransform _productionContent;
-        private readonly List<Button> _buttons = new List<Button>();
+        private readonly ScrollRect _productionScroll;
+        private readonly List<HudButtonView> _buttons = new List<HudButtonView>();
         private int _visibleProductionButtonCount;
         private readonly RectTransform _unitListRoot;
         private readonly RectTransform _unitListViewport;
         private readonly RectTransform _unitListContent;
         private readonly ScrollRect _unitListScroll;
-        private readonly List<UnitListRow> _unitRows = new List<UnitListRow>();
+        private readonly List<SelectedUnitRowView> _unitRows = new List<SelectedUnitRowView>();
         private readonly RectTransform _unitDetailRoot;
         private readonly Image _unitPortraitFrame;
         private readonly RectTransform _unitPortraitMask;
@@ -59,63 +60,54 @@ namespace Panteon.UI
         public InformationPanelView(RuntimeHudView hud, HudViewFactory factory)
         {
             _factory = factory;
-            _panel = hud.InformationPanel;
-            _headerPlate = HudViewFactory.Require<Image>(_panel, "InfoHeaderPlate");
-            _header = HudViewFactory.Require<Text>(_panel, "InfoHeaderPlate/InfoHeader");
-            _title = HudViewFactory.Require<Text>(_panel, "InfoTitle");
-            _subtitle = HudViewFactory.Require<Text>(_panel, "InfoSubtitle");
-            _preview = HudViewFactory.Require<Image>(_panel, "InfoPreview");
-            _hp = HudViewFactory.Require<Text>(_panel, "InfoHp");
-            _productionRoot = HudViewFactory.Require<RectTransform>(_panel, "UnitProduction");
-            _productionTitlePlate = HudViewFactory.Require<Image>(_productionRoot, "TitlePlate");
-            _productionTitle = HudViewFactory.Require<Text>(_productionRoot, "TitlePlate/UnitProductionTitle");
-            _productionContent = HudViewFactory.Require<RectTransform>(_productionRoot, "UnitProductionContent");
-
-            _unitListRoot = HudViewFactory.Require<RectTransform>(_panel, "SelectedUnits");
-            _unitListScroll = HudViewFactory.Require<ScrollRect>(_panel, "SelectedUnits");
-            _unitListViewport = HudViewFactory.Require<RectTransform>(_panel, "SelectedUnits/Viewport");
-            _unitListContent = HudViewFactory.Require<RectTransform>(_panel, "SelectedUnits/Viewport/Content");
-
-            _unitDetailRoot = HudViewFactory.Require<RectTransform>(_panel, "UnitDetails");
-            _unitPortraitFrame = HudViewFactory.Require<Image>(_unitDetailRoot, "PortraitFrame");
-            _unitPortraitMask = HudViewFactory.Require<RectTransform>(_unitDetailRoot, "PortraitMask");
-            _unitPortraitIcon = HudViewFactory.Require<Image>(_unitPortraitMask, "Portrait");
-            _unitNamePlate = HudViewFactory.Require<Image>(_unitDetailRoot, "NamePlate");
-            _unitName = HudViewFactory.Require<Text>(_unitNamePlate.transform, "Name");
-            _unitDescriptionPlate = HudViewFactory.Require<Image>(_unitDetailRoot, "DescriptionPlate");
-            _unitDescription = HudViewFactory.Require<Text>(_unitDescriptionPlate.transform, "Description");
-            _unitHealthStat = HudViewFactory.Require<Text>(_unitDetailRoot, "HealthStat");
-            _unitAttackStat = HudViewFactory.Require<Text>(_unitDetailRoot, "AttackStat");
-
-            _buildingDetailRoot = HudViewFactory.Require<RectTransform>(_panel, "BuildingDetails");
-            _buildingPortraitFrame = HudViewFactory.Require<Image>(_buildingDetailRoot, "PortraitFrame");
-            _buildingPortrait = HudViewFactory.Require<Image>(_buildingPortraitFrame.transform, "Portrait");
-            _buildingNamePlate = HudViewFactory.Require<Image>(_buildingDetailRoot, "NamePlate");
-            _buildingName = HudViewFactory.Require<Text>(_buildingNamePlate.transform, "Name");
-            _buildingDescriptionPlate = HudViewFactory.Require<Image>(_buildingDetailRoot, "DescriptionPlate");
-            _buildingDescription = HudViewFactory.Require<Text>(_buildingDescriptionPlate.transform, "Description");
-            _buildingHealthStat = HudViewFactory.Require<Text>(_buildingDetailRoot, "HealthStat");
-            _buildingSeparator = HudViewFactory.Require<Image>(_buildingDetailRoot, "Separator");
-            _destroyButton = HudViewFactory.Find<Button>(_panel, "DestroyButton");
+            var bindings = hud.InformationBindings != null
+                ? hud.InformationBindings
+                : throw new InvalidOperationException("RuntimeHUD information bindings are missing.");
+            bindings.ValidateReferences();
+            _panel = bindings.Root;
+            _headerPlate = bindings.HeaderPlate;
+            _header = bindings.Header;
+            _title = bindings.Title;
+            _subtitle = bindings.Subtitle;
+            _preview = bindings.Preview;
+            _hp = bindings.Hp;
+            _productionRoot = bindings.ProductionRoot;
+            _productionTitlePlate = bindings.ProductionTitlePlate;
+            _productionTitle = bindings.ProductionTitle;
+            _productionContent = bindings.ProductionContent;
+            _productionScroll = bindings.ProductionScroll;
+            _unitListRoot = bindings.UnitListRoot;
+            _unitListScroll = bindings.UnitListScroll;
+            _unitListViewport = bindings.UnitListViewport;
+            _unitListContent = bindings.UnitListContent;
+            _unitDetailRoot = bindings.UnitDetailRoot;
+            _unitPortraitFrame = bindings.UnitPortraitFrame;
+            _unitPortraitMask = bindings.UnitPortraitMask;
+            _unitPortraitIcon = bindings.UnitPortraitIcon;
+            _unitNamePlate = bindings.UnitNamePlate;
+            _unitName = bindings.UnitName;
+            _unitDescriptionPlate = bindings.UnitDescriptionPlate;
+            _unitDescription = bindings.UnitDescription;
+            _unitHealthStat = bindings.UnitHealthStat;
+            _unitAttackStat = bindings.UnitAttackStat;
+            _buildingDetailRoot = bindings.BuildingDetailRoot;
+            _buildingPortraitFrame = bindings.BuildingPortraitFrame;
+            _buildingPortrait = bindings.BuildingPortrait;
+            _buildingNamePlate = bindings.BuildingNamePlate;
+            _buildingName = bindings.BuildingName;
+            _buildingDescriptionPlate = bindings.BuildingDescriptionPlate;
+            _buildingDescription = bindings.BuildingDescription;
+            _buildingHealthStat = bindings.BuildingHealthStat;
+            _buildingSeparator = bindings.BuildingSeparator;
+            _destroyButton = bindings.DestroyButton;
             if (_destroyButton != null)
             {
-                _destroyButtonLabel = HudViewFactory.Find<Text>(_destroyButton.transform, "Label");
+                _destroyButtonLabel = bindings.DestroyButtonLabel;
                 _destroyButton.onClick.RemoveAllListeners();
                 _destroyButton.onClick.AddListener(HandleDestroyClicked);
             }
-
-            for (var i = 0; i < _productionContent.childCount; i++)
-            {
-                var button = _productionContent.GetChild(i).GetComponent<Button>();
-                if (button != null) _buttons.Add(button);
-            }
-            for (var i = 0; i < _unitListContent.childCount; i++)
-            {
-                var root = _unitListContent.GetChild(i) as RectTransform;
-                var icon = root != null ? root.Find("Icon")?.GetComponent<Image>() : null;
-                var name = root != null ? root.Find("Name")?.GetComponent<Text>() : null;
-                if (root != null && icon != null && name != null) _unitRows.Add(new UnitListRow(root, icon, name));
-            }
+            _buttons.AddRange(bindings.ProductionCards);
+            _unitRows.AddRange(bindings.UnitRows);
             ShowEmpty();
         }
 
@@ -328,19 +320,9 @@ namespace Panteon.UI
                     listWidth - padding * 2f - _factory.Scaled(64f), rowHeight));
             }
 
-            var productionWidth = _productionContent.rect.width;
+            var productionWidth = _productionRoot.rect.width;
             var productionHeight = _productionContent.rect.height;
-            var productionSpacing = _factory.Scaled(6f);
-            var buttonWidth = (productionWidth - productionSpacing *
-                Mathf.Max(0, _visibleProductionButtonCount - 1)) /
-                Mathf.Max(1, _visibleProductionButtonCount);
-            for (var i = 0; i < _visibleProductionButtonCount; i++)
-            {
-                HudViewFactory.SetRect((RectTransform)_buttons[i].transform,
-                    new Rect(i * (buttonWidth + productionSpacing), 0f,
-                        buttonWidth, productionHeight));
-                _factory.LayoutButton(_buttons[i]);
-            }
+            LayoutProductionButtons(productionWidth, productionHeight);
         }
 
         public void Layout(Rect rect)
@@ -416,16 +398,7 @@ namespace Panteon.UI
                 HudViewFactory.SetRect(row.Name.rectTransform, new Rect(_factory.Scaled(56f), 0f, listWidth - padding * 2f - _factory.Scaled(64f), rowHeight));
             }
 
-            var productionSpacing = _factory.Scaled(6f);
-            var productionButtonWidth = (detailWidth - productionSpacing *
-                Mathf.Max(0, _visibleProductionButtonCount - 1)) / Mathf.Max(1, _visibleProductionButtonCount);
-            for (var i = 0; i < _visibleProductionButtonCount; i++)
-            {
-                HudViewFactory.SetRect((RectTransform)_buttons[i].transform,
-                    new Rect(i * (productionButtonWidth + productionSpacing), 0f,
-                        productionButtonWidth, _factory.Scaled(78f)));
-                _factory.LayoutButton(_buttons[i]);
-            }
+            LayoutProductionButtons(detailWidth, _factory.Scaled(78f));
         }
 
         public void PrewarmProductionButtons(int capacity)
@@ -455,12 +428,12 @@ namespace Panteon.UI
                     var button = _buttons[_visibleProductionButtonCount++];
                     button.gameObject.SetActive(true);
                     button.name = definition.DisplayName.Replace(" ", string.Empty);
-                    button.onClick.RemoveAllListeners();
+                    button.Button.onClick.RemoveAllListeners();
                     var capturedDefinition = definition;
                     var capturedBuilding = building;
-                    button.onClick.AddListener(() => requestProduction?.Invoke(capturedBuilding, capturedDefinition));
+                    button.Button.onClick.AddListener(() => requestProduction?.Invoke(capturedBuilding, capturedDefinition));
 
-                    var icon = button.transform.Find("Icon")?.GetComponent<Image>();
+                    var icon = button.Icon;
                     if (icon != null)
                     {
                         _factory.BindDisplaySprite(
@@ -469,21 +442,55 @@ namespace Panteon.UI
                             definition.IconContentRect,
                             2f * definition.ProductionIconScale);
                     }
-                    var label = button.transform.Find("Label")?.GetComponent<Text>();
-                    if (label != null) label.text = definition.DisplayName;
+                    button.Label.text = definition.DisplayName;
                 }
             }
 
             for (var i = _visibleProductionButtonCount; i < _buttons.Count; i++)
                 _buttons[i].gameObject.SetActive(false);
+
+            _productionContent.anchoredPosition = new Vector2(0f, _productionContent.anchoredPosition.y);
+            _productionScroll.horizontalNormalizedPosition = 0f;
         }
 
         private void EnsureProductionButtonPool(int requiredCount)
         {
             if (requiredCount <= _buttons.Count) return;
-            throw new InvalidOperationException(
-                $"RuntimeHUD has {_buttons.Count} unit production cards but the selection requires {requiredCount}. " +
-                "Add the required production cards to RuntimeHUD.prefab.");
+            if (_buttons.Count == 0)
+                throw new InvalidOperationException("RuntimeHUD requires at least one authored unit production card.");
+
+            var template = _buttons[0];
+            while (_buttons.Count < requiredCount)
+            {
+                var button = UnityEngine.Object.Instantiate(template, _productionContent);
+                button.name = $"ProductionCard{_buttons.Count + 1}";
+                button.Button.onClick.RemoveAllListeners();
+                button.gameObject.SetActive(false);
+                _buttons.Add(button);
+            }
+        }
+
+        private void LayoutProductionButtons(float viewportWidth, float buttonHeight)
+        {
+            if (viewportWidth <= 0f) return;
+
+            const int visibleCardCapacity = 4;
+            var spacing = _factory.Scaled(2f);
+            var buttonWidth = (viewportWidth - spacing * (visibleCardCapacity - 1)) / visibleCardCapacity;
+            var contentWidth = Mathf.Max(
+                viewportWidth,
+                _visibleProductionButtonCount * buttonWidth +
+                Mathf.Max(0, _visibleProductionButtonCount - 1) * spacing);
+
+            _productionContent.sizeDelta = new Vector2(contentWidth, _productionContent.sizeDelta.y);
+            _productionScroll.horizontal = contentWidth > viewportWidth + 0.5f;
+
+            for (var i = 0; i < _visibleProductionButtonCount; i++)
+            {
+                HudViewFactory.SetRect(_buttons[i].Root,
+                    new Rect(i * (buttonWidth + spacing), 0f, buttonWidth, buttonHeight));
+                _factory.LayoutButton(_buttons[i]);
+            }
         }
 
         private void HideProductionButtons()
@@ -492,7 +499,7 @@ namespace Panteon.UI
             foreach (var button in _buttons)
             {
                 if (button == null) continue;
-                button.onClick.RemoveAllListeners();
+                button.Button.onClick.RemoveAllListeners();
                 button.gameObject.SetActive(false);
             }
         }
@@ -512,18 +519,5 @@ namespace Panteon.UI
                 if (row.Root != null) row.Root.gameObject.SetActive(false);
         }
 
-        private sealed class UnitListRow
-        {
-            public readonly RectTransform Root;
-            public readonly Image Icon;
-            public readonly Text Name;
-
-            public UnitListRow(RectTransform root, Image icon, Text name)
-            {
-                Root = root;
-                Icon = icon;
-                Name = name;
-            }
-        }
     }
 }

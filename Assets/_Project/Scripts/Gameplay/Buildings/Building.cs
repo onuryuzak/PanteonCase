@@ -58,6 +58,7 @@ namespace Panteon.Gameplay.Buildings
                 _production = gameObject.AddComponent<ProductionComponent>();
             _production?.Initialize(definition.CanProduce ? definition.Producibles : null);
             name = $"BLD_{definition.DisplayName.Replace(" ", string.Empty)}_{GetInstanceID():000}";
+            PlayRevealSpawnFeedback();
         }
 
         public void TakeDamage(int amount) => Health.TakeDamage(amount);
@@ -103,6 +104,7 @@ namespace Panteon.Gameplay.Buildings
             _gridOccupant?.Release();
             Health.OnHealthChanged -= HandleHealthChanged;
             Health.OnDied -= HandleDied;
+            ResetFeedback();
         }
 
         private void HandleHealthChanged(int current, int max) =>
@@ -112,7 +114,7 @@ namespace Panteon.Gameplay.Buildings
         {
             _gridOccupant?.Release();
             _bus?.Publish(new EntityDied(this));
-            _returnToPool?.Invoke(this);
+            PlayDeathFeedback(() => _returnToPool?.Invoke(this));
         }
 
         private void ConsiderSpawnCandidate(Vector2Int candidate, Vector2Int preferred,
