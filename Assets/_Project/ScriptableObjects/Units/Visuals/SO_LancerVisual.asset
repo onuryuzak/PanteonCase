@@ -14,21 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _controller: {fileID: 9100000, guid: fa7ae5cd619544ca4a4ea82a50baa12d, type: 2}
   _referenceSprite: {fileID: -594197781322936934, guid: 2307ce0d618cb4ea2be2cb2a4148cbde, type: 3}
-  _idleState: Base Layer.Lancer_Idle_Blue
-  _moveState: Base Layer.Lancer_ Run_Blue
-  _attackStates:
-    _up: Base Layer.Lancer_ Up_Attack_Blue
-    _upRight: Base Layer.Lancer_ UpRight_Attack_Blue
-    _right: Base Layer.Lancer_ Right_Attack_Blue
-    _downRight: Base Layer.Lancer_ DownRight_Attack_Blue
-    _down: Base Layer.Lancer_ Down_Attack_Blue
-  _secondaryAttackState: 
-  _hitStates:
-    _up: Base Layer.Lancer_ Up_Defence_Blue
-    _upRight: Base Layer.Lancer_ UpRight_Defence_Blue
-    _right: Base Layer.Lancer_ Right_Defence_Blue
-    _downRight: Base Layer.Lancer_ DownRight_Defence_Blue
-    _down: Base Layer.Lancer_ Down_Defence_Blue
   _visualHeightInCells: 1.08
   _contentHeightRatio: 0.3
   _attackImpactDelay: 0.2

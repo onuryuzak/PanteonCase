@@ -9,13 +9,14 @@ namespace Panteon.Gameplay.Units
     {
         private const string VisualName = "TinySwordsVisual";
         private UnitVisualProfileSO _profile;
+        private UnitAnimationMap _animations;
         private UnitStateMachine _stateMachine;
         private SpriteRenderer _legacyRenderer;
         private SpriteRenderer _renderer;
         private Animator _animator;
         private Coroutine _hitRoutine;
         private bool _useSecondaryAttack;
-        private string _currentState;
+        private int _currentState;
 
         public float AttackImpactDelay => _profile != null ? _profile.AttackImpactDelay : 0f;
         public Sprite ProjectileSprite => _profile != null ? _profile.ProjectileSprite : null;
@@ -31,17 +32,18 @@ namespace Panteon.Gameplay.Units
         {
             Release();
             _profile = profile;
+            _animations = profile != null ? UnitAnimationMap.Create(profile.Controller) : null;
             _stateMachine = stateMachine;
             EnsureVisual();
-            var hasProfile = _profile != null && _profile.Controller != null;
+            var hasProfile = _profile != null && _profile.Controller != null && _animations != null && _animations.IsValid;
             if (_legacyRenderer != null) _legacyRenderer.enabled = !hasProfile;
             _renderer.gameObject.SetActive(hasProfile);
             if (!hasProfile) return;
 
             _animator.runtimeAnimatorController = _profile.Controller;
-            ApplyScale();
             _stateMachine.OnStateChanged += HandleStateChanged;
-            Play(_profile.IdleState);
+            Play(_animations.IdleHash);
+            ApplyScale();
         }
 
         public void SetFacing(float horizontalDirection)
@@ -55,18 +57,19 @@ namespace Panteon.Gameplay.Units
             if (_profile == null) return;
             var direction = targetWorldPosition - transform.position;
             SetFacing(direction.x);
-            var state = _profile.ResolveAttackState(direction);
-            if (_useSecondaryAttack && !string.IsNullOrWhiteSpace(_profile.SecondaryAttackState))
-                state = _profile.SecondaryAttackState;
-            _useSecondaryAttack = !_useSecondaryAttack;
+            var state = _useSecondaryAttack && _animations.HasSecondaryAttack
+                ? _animations.SecondaryAttackHash
+                : _animations.ResolveAttackHash(direction);
+            if (_animations.HasSecondaryAttack) _useSecondaryAttack = !_useSecondaryAttack;
             Play(state, true);
         }
 
         public void PlayHit()
         {
             if (_profile == null) return;
-            var state = _profile.ResolveHitState(_renderer != null && _renderer.flipX ? Vector2.left : Vector2.right);
-            if (string.IsNullOrWhiteSpace(state)) return;
+            if (_animations == null || !_animations.HasHit) return;
+            var state = _animations.ResolveHitHash(
+                _renderer != null && _renderer.flipX ? Vector2.left : Vector2.right);
             if (_hitRoutine != null) StopCoroutine(_hitRoutine);
             _hitRoutine = StartCoroutine(PlayHitThenResume(state));
         }
@@ -75,15 +78,16 @@ namespace Panteon.Gameplay.Units
         {
             if (_stateMachine != null) _stateMachine.OnStateChanged -= HandleStateChanged;
             _stateMachine = null;
+            _animations = null;
             if (_hitRoutine != null) StopCoroutine(_hitRoutine);
             _hitRoutine = null;
             _useSecondaryAttack = false;
-            _currentState = null;
+            _currentState = 0;
             if (_animator != null) _animator.runtimeAnimatorController = null;
             if (_renderer != null) _renderer.gameObject.SetActive(false);
         }
 
-        private IEnumerator PlayHitThenResume(string state)
+        private IEnumerator PlayHitThenResume(int state)
         {
             Play(state, true);
             yield return new WaitForSeconds(_profile.HitAnimationDuration);
@@ -99,15 +103,16 @@ namespace Panteon.Gameplay.Units
         private void PlayForUnitState(UnitState state)
         {
             if (_profile == null) return;
-            Play(state == UnitState.Moving ? _profile.MoveState : _profile.IdleState);
+            if (_animations == null) return;
+            Play(state == UnitState.Moving ? _animations.MoveHash : _animations.IdleHash);
         }
 
-        private void Play(string stateName, bool restart = false)
+        private void Play(int stateHash, bool restart = false)
         {
-            if (_animator == null || string.IsNullOrWhiteSpace(stateName)) return;
-            if (!restart && _currentState == stateName) return;
-            _currentState = stateName;
-            _animator.Play(stateName, 0, 0f);
+            if (_animator == null || stateHash == 0) return;
+            if (!restart && _currentState == stateHash) return;
+            _currentState = stateHash;
+            _animator.Play(stateHash, 0, 0f);
             _animator.Update(0f);
         }
 
@@ -138,7 +143,7 @@ namespace Panteon.Gameplay.Units
 
         private void ApplyScale()
         {
-            var sprite = _profile.ReferenceSprite;
+            var sprite = _profile.ReferenceSprite != null ? _profile.ReferenceSprite : _renderer.sprite;
             if (sprite == null || sprite.bounds.size.y <= 0f) return;
             var visibleHeight = sprite.bounds.size.y * Mathf.Max(0.01f, _profile.ContentHeightRatio);
             var scale = _profile.VisualHeightInCells / visibleHeight;

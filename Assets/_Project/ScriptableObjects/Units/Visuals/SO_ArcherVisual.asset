@@ -14,21 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _controller: {fileID: 9100000, guid: e69e54e6f75584bf382ddbe934f532b6, type: 2}
   _referenceSprite: {fileID: 7257567913506708742, guid: 72c22f22ea5e4488390ba536cd5ab98d, type: 3}
-  _idleState: Base Layer.Archer_Idle_Blue
-  _moveState: Base Layer.Archer_Run_Blue
-  _attackStates:
-    _up: 
-    _upRight: 
-    _right: Base Layer.Archer_Shoot_Blue
-    _downRight: 
-    _down: 
-  _secondaryAttackState: 
-  _hitStates:
-    _up: 
-    _upRight: 
-    _right: 
-    _downRight: 
-    _down: 
   _visualHeightInCells: 1.08
   _contentHeightRatio: 0.4583333
   _attackImpactDelay: 0.5

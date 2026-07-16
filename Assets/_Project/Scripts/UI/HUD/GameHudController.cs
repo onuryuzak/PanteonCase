@@ -10,16 +10,13 @@ namespace Panteon.UI
     /// </summary>
     public sealed class GameHudController : MonoBehaviour, IInputBlocker
     {
-        private const float UiScaleMultiplier = 2f;
-
         [SerializeField] private BuildingCatalogSO _catalog;
+        [SerializeField] private RuntimeHudView _hud;
         [SerializeField] private Camera _boardCamera;
         [SerializeField] private Vector2Int _gridSize = new Vector2Int(24, 16);
         [SerializeField] private Vector2 _gridOrigin = new Vector2(-12f, -8f);
         [SerializeField, Min(0.1f)] private float _cellSize = 1f;
         [SerializeField, Min(0f)] private float _boardPaddingPercent = 0.02f;
-        [SerializeField] private Font _regularFont;
-        [SerializeField] private Font _boldFont;
 
         private readonly List<BuildingDefinitionSO> _buildings = new List<BuildingDefinitionSO>();
         private readonly List<IEntityPresentation> _selectedUnits = new List<IEntityPresentation>();
@@ -32,24 +29,21 @@ namespace Panteon.UI
         private InformationPanelView _informationView;
         private BoardViewportController _boardViewport;
         private Rect _boardRect;
-        private int _lastWidth = -1;
-        private int _lastHeight = -1;
-        private float _lastScale = -1f;
         private string _status = "Choose a building, then click a valid grid cell.";
 
         private void Start()
         {
             ResolveDependencies();
             BuildViews();
+            if (_hud == null) return;
             SubscribeToEvents();
-            RefreshLayout(true);
             RefreshStatus();
             RefreshSelection();
         }
 
         private void Update()
         {
-            RefreshLayout(false);
+            if (_hud != null) _boardRect = _hud.GetBoardScreenRect();
             _boardViewport?.Apply(_boardRect);
         }
 
@@ -57,6 +51,7 @@ namespace Panteon.UI
         {
             UnsubscribeFromEvents();
             if (_productionView != null) _productionView.BuildingRequested -= HandleBuildingRequested;
+            if (_informationView != null) _informationView.DestroyRequested -= HandleDestroyRequested;
             _boardViewport?.Dispose();
             _viewFactory?.Dispose();
         }
@@ -83,26 +78,25 @@ namespace Panteon.UI
 
         private void BuildViews()
         {
-            _viewFactory = new HudViewFactory(_regularFont, _boldFont);
-            var root = _viewFactory.CreateHudRoot();
-            _productionView = new ProductionMenuView(root, _viewFactory);
-            _informationView = new InformationPanelView(root, _viewFactory);
-            _informationView.PrewarmProductionButtons(GetMaximumProductionButtonCount());
+            if (_hud == null) _hud = GetComponentInChildren<RuntimeHudView>(true);
+            if (_hud == null)
+            {
+                Debug.LogError("GameHudController requires a RuntimeHUD view under Main.", this);
+                enabled = false;
+                return;
+            }
+
+            _viewFactory = new HudViewFactory();
+            _viewFactory.SetScale(2f);
+            _productionView = new ProductionMenuView(_hud, _viewFactory);
+            _informationView = new InformationPanelView(_hud, _viewFactory);
             _boardViewport = new BoardViewportController(_boardCamera, _gridSize, _gridOrigin, _cellSize, _boardPaddingPercent);
 
             _productionView.BuildingRequested += HandleBuildingRequested;
+            _informationView.DestroyRequested += HandleDestroyRequested;
             _productionView.SetBuildings(_buildings);
-        }
-
-        private int GetMaximumProductionButtonCount()
-        {
-            var maximum = 0;
-            foreach (var building in _buildings)
-            {
-                if (building == null || !building.CanProduce || building.Producibles == null) continue;
-                maximum = Mathf.Max(maximum, building.Producibles.Count);
-            }
-            return maximum;
+            _productionView.RefreshContentLayout();
+            _boardRect = _hud.GetBoardScreenRect();
         }
 
         private void SubscribeToEvents()
@@ -127,6 +121,12 @@ namespace Panteon.UI
 
         private void HandleBuildingRequested(BuildingDefinitionSO definition) =>
             _placementService?.EnterPlacementMode(definition);
+
+        private static void HandleDestroyRequested(IDamageable target)
+        {
+            if (target == null || target.IsDead) return;
+            target.TakeDamage(target.CurrentHP);
+        }
 
         private void HandleBuildingSelected(BuildingSelected message)
         {
@@ -182,26 +182,5 @@ namespace Panteon.UI
 
         private void RefreshStatus() => _productionView?.SetStatus(_status);
 
-        private void RefreshLayout(bool force)
-        {
-            var scale = CalculateScale(Screen.width, Screen.height);
-            if (!force && _lastWidth == Screen.width && _lastHeight == Screen.height && Mathf.Approximately(_lastScale, scale)) return;
-            _lastWidth = Screen.width;
-            _lastHeight = Screen.height;
-            _lastScale = scale;
-            _viewFactory.SetScale(scale);
-
-            var layout = HudLayout.Calculate(Screen.width, Screen.height, scale);
-            _boardRect = layout.Board;
-            _productionView.Layout(layout.Production);
-            _informationView.Layout(layout.Information);
-        }
-
-        private float CalculateScale(int width, int height)
-        {
-            if (width <= 0 || height <= 0) return 1f;
-            var resolutionScale = Mathf.Min(width / 1920f, height / 1080f);
-            return Mathf.Clamp(resolutionScale * UiScaleMultiplier, 0.75f, 5f);
-        }
     }
 }

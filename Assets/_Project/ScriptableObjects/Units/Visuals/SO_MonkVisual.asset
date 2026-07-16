@@ -14,21 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _controller: {fileID: 9100000, guid: 010817759ac3943d8a63d1698ab7d60e, type: 2}
   _referenceSprite: {fileID: 4723107735738678597, guid: 7ba4178767e424c47b91888898a1fdc4, type: 3}
-  _idleState: Base Layer.Monk_Idle_Blue
-  _moveState: Base Layer.Monk_Run_Blue
-  _attackStates:
-    _up: 
-    _upRight: 
-    _right: Base Layer.Monk_Heal_Blue
-    _downRight: 
-    _down: 
-  _secondaryAttackState: 
-  _hitStates:
-    _up: 
-    _upRight: 
-    _right: 
-    _downRight: 
-    _down: 
   _visualHeightInCells: 1.08
   _contentHeightRatio: 0.359375
   _attackImpactDelay: 0.65

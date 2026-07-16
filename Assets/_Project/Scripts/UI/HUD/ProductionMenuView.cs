@@ -27,35 +27,23 @@ namespace Panteon.UI
 
         public event Action<BuildingDefinitionSO> BuildingRequested;
 
-        public ProductionMenuView(RectTransform root, HudViewFactory factory)
+        public ProductionMenuView(RuntimeHudView hud, HudViewFactory factory)
         {
             _factory = factory;
-            _panel = factory.Panel(root, "ProductionPanel", HudViewFactory.PanelColor);
-            _titlePlate = factory.Image(_panel, "ProductionTitlePlate", HudViewFactory.HeaderColor);
-            factory.StyleRounded(_titlePlate);
-            _title = factory.Text(_titlePlate.transform, "ProductionTitle", "Production", 16, FontStyle.Bold, TextAnchor.MiddleCenter, HudViewFactory.TextColor);
-            _subtitle = factory.Text(_panel, "ProductionSubtitle", "Infinite Scrollview", 11, FontStyle.Normal, TextAnchor.MiddleLeft, HudViewFactory.MutedTextColor);
-            _subtitle.gameObject.SetActive(false);
-            _scroll = HudViewFactory.CreateRect("ProductionScroll", _panel);
-            var background = _scroll.gameObject.AddComponent<Image>();
-            background.sprite = factory.SolidSprite;
-            background.color = Color.clear;
-            _scrollRect = _scroll.gameObject.AddComponent<ScrollRect>();
-            _scrollRect.horizontal = false;
-            _scrollRect.movementType = ScrollRect.MovementType.Clamped;
-            _viewport = HudViewFactory.CreateRect("Viewport", _scroll);
-            var viewportImage = _viewport.gameObject.AddComponent<Image>();
-            viewportImage.sprite = factory.SolidSprite;
-            viewportImage.color = new Color(1f, 1f, 1f, 0.02f);
-            _viewport.gameObject.AddComponent<RectMask2D>();
-            _content = HudViewFactory.CreateRect("Content", _viewport);
-            _content.anchorMin = new Vector2(0f, 1f);
-            _content.anchorMax = new Vector2(1f, 1f);
-            _content.pivot = new Vector2(0f, 1f);
-            _scrollRect.viewport = _viewport;
-            _scrollRect.content = _content;
-            _status = factory.Text(_panel, "Status", string.Empty, 11, FontStyle.Normal, TextAnchor.MiddleLeft, HudViewFactory.MutedTextColor);
-            _status.gameObject.SetActive(false);
+            _panel = hud.ProductionPanel;
+            _titlePlate = HudViewFactory.Require<Image>(_panel, "ProductionTitlePlate");
+            _title = HudViewFactory.Require<Text>(_panel, "ProductionTitlePlate/ProductionTitle");
+            _subtitle = HudViewFactory.Require<Text>(_panel, "ProductionSubtitle");
+            _scroll = HudViewFactory.Require<RectTransform>(_panel, "ProductionScroll");
+            _scrollRect = HudViewFactory.Require<ScrollRect>(_panel, "ProductionScroll");
+            _viewport = HudViewFactory.Require<RectTransform>(_panel, "ProductionScroll/Viewport");
+            _content = HudViewFactory.Require<RectTransform>(_panel, "ProductionScroll/Viewport/Content");
+            _status = HudViewFactory.Require<Text>(_panel, "Status");
+            for (var i = 0; i < _content.childCount; i++)
+            {
+                var button = _content.GetChild(i).GetComponent<Button>();
+                if (button != null) _buttons.Add(button);
+            }
         }
 
         public void SetBuildings(IEnumerable<BuildingDefinitionSO> buildings)
@@ -106,21 +94,73 @@ namespace Panteon.UI
             }
         }
 
+        public void RefreshContentLayout()
+        {
+            var scrollWidth = _viewport.rect.width;
+            var scrollHeight = _viewport.rect.height;
+            var template = _buttons.Count > 0 ? (RectTransform)_buttons[0].transform : null;
+            _buttonSize = template != null && template.rect.width > 1f && template.rect.height > 1f
+                ? template.rect.size
+                : new Vector2(140f, 140f);
+            _spacing = 20f;
+            _padding = Mathf.Max(0f,
+                (scrollWidth - ColumnCount * _buttonSize.x - (ColumnCount - 1) * _spacing) * 0.5f);
+            var rows = Mathf.Max(1, Mathf.CeilToInt(_buildings.Count / (float)ColumnCount));
+            var contentHeight = _padding * 2f + rows * (_buttonSize.y + _spacing) - _spacing;
+            _content.sizeDelta = new Vector2(0f, Mathf.Max(1f, contentHeight));
+            _scrollRect.vertical = contentHeight > scrollHeight;
+
+            for (var i = 0; i < _buttons.Count; i++)
+            {
+                var active = i < _buildings.Count;
+                _buttons[i].gameObject.SetActive(active);
+                if (!active) continue;
+                var row = i / ColumnCount;
+                var column = i % ColumnCount;
+                HudViewFactory.SetRect((RectTransform)_buttons[i].transform, new Rect(
+                    _padding + column * (_buttonSize.x + _spacing),
+                    _padding + row * (_buttonSize.y + _spacing),
+                    _buttonSize.x, _buttonSize.y));
+                _factory.LayoutButton(_buttons[i]);
+                _factory.LayoutButtonIconByContentHeight(
+                    _buttons[i], _buildings[i].Icon, _buildings[i].VisualContentRect);
+            }
+        }
+
         private void RebuildButtons()
         {
-            foreach (var button in _buttons)
-                if (button != null) UnityEngine.Object.Destroy(button.gameObject);
-            _buttons.Clear();
-
-            foreach (var building in _buildings)
+            EnsureButtonPool(_buildings.Count);
+            for (var i = 0; i < _buttons.Count; i++)
             {
+                var button = _buttons[i];
+                button.onClick.RemoveAllListeners();
+                var active = i < _buildings.Count;
+                button.gameObject.SetActive(active);
+                if (!active) continue;
+                var building = _buildings[i];
                 var definition = building;
-                var button = _factory.Button(_content, definition.DisplayName, definition.Icon);
+                button.name = definition.DisplayName.Replace(" ", string.Empty);
+                var label = button.transform.Find("Label")?.GetComponent<Text>();
+                if (label != null) label.text = definition.DisplayName;
+                var icon = button.transform.Find("Icon")?.GetComponent<Image>();
+                if (icon != null)
+                {
+                    icon.sprite = definition.Icon;
+                    icon.color = definition.Icon != null ? Color.white : HudViewFactory.MutedTextColor;
+                }
                 button.onClick.AddListener(() => BuildingRequested?.Invoke(definition));
-                _buttons.Add(button);
             }
             _content.anchoredPosition = Vector2.zero;
             _scrollRect.verticalNormalizedPosition = 1f;
+            RefreshContentLayout();
+        }
+
+        private void EnsureButtonPool(int requiredCount)
+        {
+            if (requiredCount <= _buttons.Count) return;
+            throw new InvalidOperationException(
+                $"RuntimeHUD has {_buttons.Count} building cards but the catalog requires {requiredCount}. " +
+                "Run Tools/Panteon/HUD Generator again.");
         }
     }
 }
