@@ -1,13 +1,15 @@
 using Panteon.Data;
+using Panteon.Gameplay.Combat;
 using UnityEngine;
 
 namespace Panteon.Gameplay.Buildings
 {
     [RequireComponent(typeof(SpriteRenderer))]
-    public sealed class BuildingView : MonoBehaviour
+    public sealed class BuildingView : MonoBehaviour, IEntityVisualProvider
     {
         [SerializeField] private SpriteRenderer _renderer;
         private SpriteRenderer _visualRenderer;
+        public SpriteRenderer VisualRenderer => _visualRenderer != null ? _visualRenderer : _renderer;
 
         private void Awake()
         {

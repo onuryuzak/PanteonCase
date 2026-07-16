@@ -35,11 +35,13 @@ namespace Panteon.Data
         private readonly int[] _hitHashes;
 
         private UnitAnimationMap(int idleHash, int moveHash, int secondaryAttackHash,
-            int[] attackHashes, int[] hitHashes, bool hasHit)
+            int deathHash, float deathDuration, int[] attackHashes, int[] hitHashes, bool hasHit)
         {
             IdleHash = idleHash;
             MoveHash = moveHash;
             SecondaryAttackHash = secondaryAttackHash;
+            DeathHash = deathHash;
+            DeathDuration = deathDuration;
             _attackHashes = attackHashes;
             _hitHashes = hitHashes;
             HasHit = hasHit;
@@ -48,7 +50,10 @@ namespace Panteon.Data
         public int IdleHash { get; }
         public int MoveHash { get; }
         public int SecondaryAttackHash { get; }
+        public int DeathHash { get; }
+        public float DeathDuration { get; }
         public bool HasSecondaryAttack => SecondaryAttackHash != 0;
+        public bool HasDeath => DeathHash != 0;
         public bool HasHit { get; }
         public bool IsValid => IdleHash != 0;
 
@@ -66,6 +71,7 @@ namespace Panteon.Data
 
             var move = clips.FirstOrDefault(clip => ContainsAny(Normalize(clip.name), "run", "walk", "move")) ?? idle;
             var secondary = clips.FirstOrDefault(clip => IsSecondaryAttack(Normalize(clip.name)));
+            var death = clips.FirstOrDefault(clip => IsDeath(Normalize(clip.name)));
             var attacks = clips.Where(clip => IsPrimaryAttack(Normalize(clip.name))).ToList();
             var hits = clips.Where(clip => IsHit(Normalize(clip.name))).ToList();
             var attackHashes = ResolveDirections(attacks, idle);
@@ -75,12 +81,15 @@ namespace Panteon.Data
                 StateHash(idle),
                 StateHash(move),
                 secondary != null ? StateHash(secondary) : 0,
+                death != null ? StateHash(death) : 0,
+                death != null ? Mathf.Max(0.1f, death.length) : 0f,
                 attackHashes,
                 hitHashes,
                 hits.Count > 0);
         }
 
-        private static UnitAnimationMap Empty() => new UnitAnimationMap(0, 0, 0, new int[5], new int[5], false);
+        private static UnitAnimationMap Empty() =>
+            new UnitAnimationMap(0, 0, 0, 0, 0f, new int[5], new int[5], false);
 
         private static int[] ResolveDirections(IReadOnlyList<AnimationClip> clips, AnimationClip fallback)
         {
@@ -117,6 +126,9 @@ namespace Panteon.Data
 
         private static bool IsHit(string name) =>
             ContainsAny(name, "hit", "hurt", "damage", "guard", "defence", "defense");
+
+        private static bool IsDeath(string name) =>
+            ContainsAny(name, "death", "dead", "die");
 
         private static string Normalize(string value) =>
             new string(value.Where(char.IsLetterOrDigit).Select(char.ToLowerInvariant).ToArray());

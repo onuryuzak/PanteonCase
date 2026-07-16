@@ -79,6 +79,9 @@ namespace Panteon.Gameplay.Combat
                 });
 
             var renderer = _particles.GetComponent<ParticleSystemRenderer>();
+            renderer.enabled = true;
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            renderer.sharedMaterial = CombatParticleMaterial.Shared;
             renderer.sortingOrder = 65;
         }
     }

@@ -45,6 +45,36 @@ namespace Panteon.Data
         public EntityDied(IDamageable entity) => Entity = entity;
     }
 
+    public readonly struct CameraShakeRequested
+    {
+        public readonly float Amplitude;
+        public readonly float Duration;
+
+        public CameraShakeRequested(float amplitude, float duration)
+        {
+            Amplitude = Mathf.Max(0f, amplitude);
+            Duration = Mathf.Max(0f, duration);
+        }
+    }
+
+    public enum CommandFeedbackType
+    {
+        Move,
+        Attack
+    }
+
+    public readonly struct CommandFeedbackRequested
+    {
+        public readonly Vector3 WorldPosition;
+        public readonly CommandFeedbackType Type;
+
+        public CommandFeedbackRequested(Vector3 worldPosition, CommandFeedbackType type)
+        {
+            WorldPosition = worldPosition;
+            Type = type;
+        }
+    }
+
     public readonly struct ProductionRequested
     {
         public readonly IProductionBuilding Source;

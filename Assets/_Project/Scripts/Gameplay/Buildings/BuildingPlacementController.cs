@@ -14,13 +14,20 @@ namespace Panteon.Gameplay.Buildings
         private BuildingFactory _factory;
         private EventBus _bus;
         private BuildingDefinitionSO _activeDefinition;
+        private BuildingPlacementFootprintView _footprintView;
         private Vector2Int _hoveredCell;
         private bool _valid;
 
         public bool IsPlacing => _activeDefinition != null;
 
         public void Configure(GridManager grid, BuildingFactory factory, EventBus bus)
-        { _grid = grid; _factory = factory; _bus = bus; }
+        {
+            _grid = grid;
+            _factory = factory;
+            _bus = bus;
+            _footprintView = BuildingPlacementFootprintView.Ensure(gameObject);
+            _footprintView.Configure(grid);
+        }
 
         public void EnterPlacementMode(BuildingDefinitionSO definition)
         {
@@ -38,6 +45,7 @@ namespace Panteon.Gameplay.Buildings
         {
             _activeDefinition = null;
             if (_ghost != null) _ghost.gameObject.SetActive(false);
+            _footprintView?.HidePreview();
         }
 
         private void Update()
@@ -46,6 +54,10 @@ namespace Panteon.Gameplay.Buildings
             var world = _camera.ScreenToWorldPoint(Input.mousePosition);
             _hoveredCell = _grid.WorldToCell(world);
             _valid = _factory != null && _factory.CanPlace(_activeDefinition, _hoveredCell);
+            _footprintView?.ShowPreview(
+                _hoveredCell,
+                _activeDefinition.FootprintSize,
+                _valid);
             if (_ghost != null)
             {
                 ApplyGhostLayout(_activeDefinition);
@@ -57,7 +69,9 @@ namespace Panteon.Gameplay.Buildings
             {
                 if (_valid)
                 {
-                    _factory.Create(_activeDefinition, _hoveredCell);
+                    var placed = _factory.Create(_activeDefinition, _hoveredCell);
+                    if (placed != null)
+                        _footprintView?.PlayPlacedFade(_hoveredCell, _activeDefinition.FootprintSize);
                     CancelPlacement();
                 }
                 else _bus.Publish(new BuildingPlacementFailed(_hoveredCell));

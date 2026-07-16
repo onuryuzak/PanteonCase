@@ -140,16 +140,25 @@ namespace Panteon.Gameplay.Selection
 
         private void IssueContextCommand()
         {
-            var hit = Physics2D.OverlapPoint(PointerWorld(), _selectableMask);
+            var pointerWorld = PointerWorld();
+            var hit = Physics2D.OverlapPoint(pointerWorld, _selectableMask);
             var damageable = hit != null ? hit.GetComponentInParent<IDamageable>() : null;
             if (damageable != null)
             {
                 var issuedAttack = false;
                 foreach (var unit in _selectedUnits)
                     issuedAttack |= unit.AttackTarget(damageable);
-                if (issuedAttack) return;
+                if (issuedAttack)
+                {
+                    _bus?.Publish(new CommandFeedbackRequested(pointerWorld, CommandFeedbackType.Attack));
+                    return;
+                }
             }
-            IssueGroupMove(_selectedUnits, _grid.WorldToCell(PointerWorld()));
+            var destination = _grid.WorldToCell(pointerWorld);
+            IssueGroupMove(_selectedUnits, destination);
+            _bus?.Publish(new CommandFeedbackRequested(
+                _grid.Contains(destination) ? _grid.CellToWorld(destination) : pointerWorld,
+                CommandFeedbackType.Move));
         }
 
         private void OnEntityDied(EntityDied message)

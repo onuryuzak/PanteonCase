@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Panteon.Core;
 using Panteon.Data;
 using Panteon.Gameplay.Buildings;
+using Panteon.Gameplay.Feedback;
 using Panteon.Gameplay.Grid;
 using Panteon.Gameplay.Pathfinding;
 using Panteon.Gameplay.Selection;
@@ -41,6 +42,7 @@ namespace Panteon.Gameplay
             if (_poolManager != null) locator.Register(_poolManager);
             if (_gridManager == null || _poolManager == null) return;
             locator.Register(_gridManager);
+            GameplayFeedbackController.Ensure(gameObject).Configure(bus, _gridManager.CellSize);
             IPathfinder pathfinder = new AStarPathfinder();
             locator.Register(pathfinder);
             var buildingFactory = new BuildingFactory(_poolManager, _gridManager, bus, _buildingsRoot);
@@ -53,7 +55,7 @@ namespace Panteon.Gameplay
             if (_selectionController != null) locator.Register(_selectionController);
             _placementController?.Configure(_gridManager, buildingFactory, bus);
             _selectionController?.Configure(_gridManager, bus, unitFactory);
-            FindObjectOfType<CameraFitToAspect>()?.Configure(_gridManager);
+            FindObjectOfType<CameraFitToAspect>()?.Configure(_gridManager, bus);
             StartCoroutine(PrewarmCatalogPrefabs());
         }
 

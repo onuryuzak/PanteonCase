@@ -1,3 +1,5 @@
+using Panteon.Core;
+using Panteon.Data;
 using Panteon.Gameplay.Grid;
 using UnityEngine;
 
@@ -11,19 +13,39 @@ namespace Panteon.Gameplay
         [SerializeField] private float _panSpeed = 8f;
         private Camera _camera;
         private GridManager _grid;
+        private EventBus _bus;
         private int _lastWidth;
         private int _lastHeight;
+        private Vector3 _shakeOffset;
+        private float _shakeAmplitude;
+        private float _shakeDuration;
+        private float _shakeRemaining;
+        private float _shakePhase;
 
-        public void Configure(GridManager grid) { _grid = grid; Fit(); }
+        public void Configure(GridManager grid, EventBus bus)
+        {
+            if (_bus != null) _bus.Unsubscribe<CameraShakeRequested>(HandleShakeRequested);
+            _grid = grid;
+            _bus = bus;
+            _bus?.Subscribe<CameraShakeRequested>(HandleShakeRequested);
+            Fit();
+        }
+
         private void Awake() => _camera = GetComponent<Camera>();
 
         private void Update()
         {
+            RemoveShakeOffset();
             if (_lastWidth != Screen.width || _lastHeight != Screen.height) Fit();
             var input = new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
             if (input.sqrMagnitude > 1f) input.Normalize();
             transform.position += (Vector3)(input * (_panSpeed * Time.deltaTime));
             ClampToGrid();
+        }
+
+        private void LateUpdate()
+        {
+            ApplyShakeOffset();
         }
 
         private void Fit()
@@ -44,6 +66,46 @@ namespace Panteon.Gameplay
             position.x = Mathf.Clamp(position.x, min.x, max.x);
             position.y = Mathf.Clamp(position.y, min.y, max.y);
             transform.position = position;
+        }
+
+        private void HandleShakeRequested(CameraShakeRequested request)
+        {
+            if (request.Amplitude <= 0f || request.Duration <= 0f) return;
+            if (_shakeRemaining <= 0f) _shakePhase = 0f;
+            _shakeAmplitude = Mathf.Max(_shakeAmplitude, request.Amplitude);
+            _shakeDuration = Mathf.Max(_shakeDuration, request.Duration);
+            _shakeRemaining = Mathf.Max(_shakeRemaining, request.Duration);
+        }
+
+        private void ApplyShakeOffset()
+        {
+            if (_shakeRemaining <= 0f || _shakeDuration <= 0f) return;
+            _shakeRemaining = Mathf.Max(0f, _shakeRemaining - Time.unscaledDeltaTime);
+            _shakePhase += Time.unscaledDeltaTime * 52f;
+            var decay = _shakeRemaining / _shakeDuration;
+            var amplitude = _shakeAmplitude * decay * decay;
+            _shakeOffset = new Vector3(
+                Mathf.Sin(_shakePhase) * amplitude,
+                Mathf.Sin(_shakePhase * 1.37f + 0.8f) * amplitude * 0.65f,
+                0f);
+            transform.position += _shakeOffset;
+
+            if (_shakeRemaining > 0f) return;
+            _shakeAmplitude = 0f;
+            _shakeDuration = 0f;
+        }
+
+        private void RemoveShakeOffset()
+        {
+            if (_shakeOffset == Vector3.zero) return;
+            transform.position -= _shakeOffset;
+            _shakeOffset = Vector3.zero;
+        }
+
+        private void OnDestroy()
+        {
+            RemoveShakeOffset();
+            if (_bus != null) _bus.Unsubscribe<CameraShakeRequested>(HandleShakeRequested);
         }
     }
 }

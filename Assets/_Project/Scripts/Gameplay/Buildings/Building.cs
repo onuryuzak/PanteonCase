@@ -113,6 +113,7 @@ namespace Panteon.Gameplay.Buildings
         private void HandleDied()
         {
             _gridOccupant?.Release();
+            _bus?.Publish(new CameraShakeRequested(0.09f, 0.18f));
             _bus?.Publish(new EntityDied(this));
             PlayDeathFeedback(() => _returnToPool?.Invoke(this));
         }

@@ -25,6 +25,8 @@ namespace Panteon.Gameplay.Units
         private int _pathGridRevision;
         private int _lastKnownHP;
         private const float SnapDuration = 0.12f;
+        private const float AttackAnticipationDuration = 0.08f;
+        private const float ImpactPauseDuration = 0.045f;
         public UnitDefinitionSO Definition { get; private set; }
         public string DisplayName => Definition.DisplayName;
         public string Description => Definition.Description;
@@ -185,6 +187,9 @@ namespace Panteon.Gameplay.Units
                     }
                 }
                 StateMachine.ChangeState(UnitState.Attacking);
+                _animatorView?.PlayAnticipation(targetComponent.transform.position, AttackAnticipationDuration);
+                yield return new WaitForSeconds(AttackAnticipationDuration);
+                if (target == null || target.IsDead) break;
                 _animatorView?.PlayAttack(targetComponent.transform.position);
                 if (_animatorView != null && _animatorView.UsesAttackFire)
                     _attackFireFeedback?.PlayTowards(targetComponent.transform.position);
@@ -193,8 +198,12 @@ namespace Panteon.Gameplay.Units
                     targetComponent.transform.position, impactDelay);
                 if (impactDelay > 0f) yield return new WaitForSeconds(impactDelay);
                 if (target == null || target.IsDead) break;
+                if (target is ICombatFeedbackReceiver feedbackReceiver)
+                    feedbackReceiver.PrepareImpact(transform.position);
+                _animatorView?.PlayImpactPause(ImpactPauseDuration);
                 target.TakeDamage(Definition.AttackDamage);
-                var remainingCooldown = Mathf.Max(0f, Definition.AttackCooldown - impactDelay);
+                var remainingCooldown = Mathf.Max(0f,
+                    Definition.AttackCooldown - AttackAnticipationDuration - impactDelay);
                 if (remainingCooldown > 0f) yield return new WaitForSeconds(remainingCooldown);
             }
             FinishCommand(UnitState.Idle);
@@ -295,6 +304,7 @@ namespace Panteon.Gameplay.Units
             _currentCommand = null;
             _pathPreview?.Clear();
             _projectileView?.Stop();
+            _animatorView?.CancelCombatFeedback();
             if (IsDead) return;
             UpdateGridPositionFromCurrentWorldPosition();
             StateMachine.ChangeState(UnitState.Idle);
@@ -303,6 +313,7 @@ namespace Panteon.Gameplay.Units
         private void FinishCommand(UnitState state)
         {
             _pathPreview?.Clear();
+            _animatorView?.CancelCombatFeedback();
             if (!IsDead && SmoothSnapToNearestWalkableCell(state)) return;
             StateMachine.ChangeState(state);
             _currentCommand = null;
@@ -388,6 +399,7 @@ namespace Panteon.Gameplay.Units
             CancelCurrentCommand();
             StateMachine.ChangeState(UnitState.Dead);
             _bus?.Publish(new EntityDied(this));
+            if (_animatorView != null && _animatorView.PlayDeath(() => _returnToPool?.Invoke(this))) return;
             PlayDeathFeedback(() => _returnToPool?.Invoke(this));
         }
     }

@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Panteon.Gameplay
 {
     [RequireComponent(typeof(HealthComponent), typeof(SelectableComponent))]
-    public abstract class Entity : MonoBehaviour, ISelectable
+    public abstract class Entity : MonoBehaviour, ISelectable, ICombatFeedbackReceiver
     {
         protected HealthComponent Health { get; private set; }
         private SelectableComponent _selection;
@@ -31,6 +31,9 @@ namespace Panteon.Gameplay
         protected void PlayRevealSpawnFeedback() => _damageFeedback?.PlayRevealSpawn();
         protected void PlayDeathFeedback(System.Action completed) => _damageFeedback?.PlayDeath(completed);
         protected void ResetFeedback() => _damageFeedback?.ResetFeedback();
+
+        public void PrepareImpact(Vector3 sourceWorldPosition) =>
+            _damageFeedback?.PrepareImpact(sourceWorldPosition);
 
         public virtual void Select()
         {
