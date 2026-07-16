@@ -160,7 +160,7 @@ namespace Panteon.UI
             if (requiredCount <= _buttons.Count) return;
             throw new InvalidOperationException(
                 $"RuntimeHUD has {_buttons.Count} building cards but the catalog requires {requiredCount}. " +
-                "Run Tools/Panteon/HUD Generator again.");
+                "Add the required building cards to RuntimeHUD.prefab.");
         }
     }
 }

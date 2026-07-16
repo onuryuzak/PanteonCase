@@ -5,7 +5,7 @@ using UnityEngine.UI;
 namespace Panteon.UI
 {
     /// <summary>
-    /// Runtime-only HUD binding and layout utilities. Visual hierarchy creation belongs to the editor generator.
+    /// Runtime-only HUD binding and layout utilities. Visual hierarchy and styling belong to the authored prefab.
     /// </summary>
     internal sealed class HudViewFactory
     {
@@ -135,7 +135,7 @@ namespace Panteon.UI
 
         public void Dispose()
         {
-            // The prefab and editor-generated assets own all HUD graphics.
+            // The authored prefab owns all HUD graphics.
         }
 
         private static Rect ClampNormalizedRect(Rect rect)

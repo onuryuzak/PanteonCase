@@ -483,7 +483,7 @@ namespace Panteon.UI
             if (requiredCount <= _buttons.Count) return;
             throw new InvalidOperationException(
                 $"RuntimeHUD has {_buttons.Count} unit production cards but the selection requires {requiredCount}. " +
-                "Run Tools/Panteon/HUD Generator again.");
+                "Add the required production cards to RuntimeHUD.prefab.");
         }
 
         private void HideProductionButtons()
@@ -502,7 +502,7 @@ namespace Panteon.UI
             if (requiredCount <= _unitRows.Count) return;
             throw new InvalidOperationException(
                 $"RuntimeHUD has {_unitRows.Count} selected-unit rows but {requiredCount} are required. " +
-                "Increase the generated capacity and regenerate the HUD.");
+                "Add more selected-unit rows to RuntimeHUD.prefab.");
         }
 
         private void HideUnitRows()

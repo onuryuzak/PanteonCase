@@ -110,6 +110,14 @@ namespace Panteon.Gameplay.Units
         private void Play(int stateHash, bool restart = false)
         {
             if (_animator == null || stateHash == 0) return;
+            if (!_animator.HasState(0, stateHash))
+            {
+                var idleHash = _animations != null ? _animations.IdleHash : 0;
+                if (idleHash == 0 || !_animator.HasState(0, idleHash)) return;
+                stateHash = idleHash;
+                restart = false;
+            }
+
             if (!restart && _currentState == stateHash) return;
             _currentState = stateHash;
             _animator.Play(stateHash, 0, 0f);
