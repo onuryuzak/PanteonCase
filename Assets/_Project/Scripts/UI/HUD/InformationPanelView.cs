@@ -48,14 +48,9 @@ namespace Panteon.UI
         private readonly Text _buildingHealthStat;
         private readonly Image _buildingSeparator;
         private readonly Image _productionTitlePlate;
-        private Button _destroyButton;
-        private Text _destroyButtonLabel;
-        private IDamageable _destroyTarget;
         private int _visibleUnitCount;
         private Rect _lastRect;
         private Rect _buildingPortraitContentRect = new Rect(0f, 0f, 1f, 1f);
-
-        public event Action<IDamageable> DestroyRequested;
 
         public InformationPanelView(RuntimeHudView hud, HudViewFactory factory)
         {
@@ -99,13 +94,6 @@ namespace Panteon.UI
             _buildingDescription = bindings.BuildingDescription;
             _buildingHealthStat = bindings.BuildingHealthStat;
             _buildingSeparator = bindings.BuildingSeparator;
-            _destroyButton = bindings.DestroyButton;
-            if (_destroyButton != null)
-            {
-                _destroyButtonLabel = bindings.DestroyButtonLabel;
-                _destroyButton.onClick.RemoveAllListeners();
-                _destroyButton.onClick.AddListener(HandleDestroyClicked);
-            }
             _buttons.AddRange(bindings.ProductionCards);
             _unitRows.AddRange(bindings.UnitRows);
             ShowEmpty();
@@ -113,8 +101,6 @@ namespace Panteon.UI
 
         public void ShowEmpty()
         {
-            _destroyTarget = null;
-            if (_destroyButton != null) _destroyButton.gameObject.SetActive(false);
             HideProductionButtons();
             _title.text = string.Empty;
             _subtitle.text = string.Empty;
@@ -183,8 +169,6 @@ namespace Panteon.UI
             }
 
             HideProductionButtons();
-            _destroyTarget = null;
-            if (_destroyButton != null) _destroyButton.gameObject.SetActive(false);
             _unitDetailRoot.gameObject.SetActive(false);
             _buildingDetailRoot.gameObject.SetActive(false);
             _title.gameObject.SetActive(true);
@@ -215,7 +199,6 @@ namespace Panteon.UI
 
         private void ShowUnit(IUnitPresentation unit)
         {
-            BindDestroyButton(unit, "Kill");
             HideProductionButtons();
             HideUnitRows();
             _unitListRoot.gameObject.SetActive(false);
@@ -238,7 +221,6 @@ namespace Panteon.UI
         private void ShowBuilding(IProductionBuilding building,
             Action<IProductionBuilding, UnitDefinitionSO> requestProduction)
         {
-            BindDestroyButton(building, "Destruct");
             HideProductionButtons();
             HideUnitRows();
             _unitListRoot.gameObject.SetActive(false);
@@ -261,20 +243,6 @@ namespace Panteon.UI
             _productionRoot.gameObject.SetActive(building.CanProduce);
             if (building.CanProduce) BindProductionButtons(building, requestProduction);
             RefreshDynamicLayout();
-        }
-
-        private void BindDestroyButton(IDamageable target, string label)
-        {
-            _destroyTarget = target;
-            if (_destroyButton == null) return;
-            _destroyButton.gameObject.SetActive(target != null && !target.IsDead);
-            if (_destroyButtonLabel != null) _destroyButtonLabel.text = label;
-        }
-
-        private void HandleDestroyClicked()
-        {
-            if (_destroyTarget == null || _destroyTarget.IsDead) return;
-            DestroyRequested?.Invoke(_destroyTarget);
         }
 
         private void RefreshDynamicLayout()

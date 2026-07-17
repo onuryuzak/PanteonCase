@@ -11,7 +11,7 @@ namespace Panteon.Gameplay.Feedback
         private readonly Transform _root;
         private readonly Queue<CommandRing> _available = new Queue<CommandRing>();
         private readonly List<CommandRing> _active = new List<CommandRing>();
-        private readonly Sprite _ringSprite;
+        private readonly Sprite _markerSprite;
         private readonly Material _material;
         private readonly float _cellSize;
 
@@ -20,13 +20,13 @@ namespace Panteon.Gameplay.Feedback
             _cellSize = Mathf.Max(0.1f, cellSize);
             _root = new GameObject("CommandFeedbackPool").transform;
             _root.SetParent(parent, false);
-            _ringSprite = CreateRingSprite();
+            _markerSprite = CreateMarkerSprite();
             var shader = Shader.Find("Sprites/Default") ?? Shader.Find("UI/Default");
             _material = shader != null ? new Material(shader) : null;
             if (_material != null)
             {
                 _material.name = "CommandFeedbackShared";
-                _material.mainTexture = _ringSprite.texture;
+                _material.mainTexture = _markerSprite.texture;
                 _material.hideFlags = HideFlags.HideAndDontSave;
             }
             for (var i = 0; i < PrewarmCount; i++) _available.Enqueue(Create());
@@ -63,20 +63,20 @@ namespace Panteon.Gameplay.Feedback
             var owner = new GameObject("CommandRing");
             owner.transform.SetParent(_root, false);
             var renderer = owner.AddComponent<SpriteRenderer>();
-            renderer.sprite = _ringSprite;
+            renderer.sprite = _markerSprite;
             renderer.sharedMaterial = _material;
             renderer.sortingOrder = 75;
             owner.SetActive(false);
             return new CommandRing(owner.transform, renderer);
         }
 
-        private static Sprite CreateRingSprite()
+        private static Sprite CreateMarkerSprite()
         {
             const int size = 64;
             var texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
             {
-                name = "CommandRing",
-                filterMode = FilterMode.Bilinear,
+                name = "CommandMarker",
+                filterMode = FilterMode.Point,
                 wrapMode = TextureWrapMode.Clamp,
                 hideFlags = HideFlags.HideAndDontSave
             };
@@ -85,21 +85,32 @@ namespace Panteon.Gameplay.Feedback
             for (var y = 0; y < size; y++)
             for (var x = 0; x < size; x++)
             {
-                var distance = Vector2.Distance(new Vector2(x, y), new Vector2(center, center)) / center;
-                var ring = 1f - Mathf.Clamp01(Mathf.Abs(distance - 0.78f) / 0.075f);
-                var alpha = (byte)Mathf.RoundToInt(ring * ring * 255f);
-                pixels[y * size + x] = new Color32(255, 255, 255, alpha);
+                var dx = Mathf.Abs((x - center) / center);
+                var dy = Mathf.Abs((y - center) / center);
+                var diamondDistance = dx + dy;
+                var outerOutline = diamondDistance >= 0.67f && diamondDistance <= 0.91f;
+                var brightDiamond = diamondDistance >= 0.72f && diamondDistance <= 0.84f;
+                var centerDiamond = diamondDistance <= 0.17f;
+                var axisTick = (dx <= 0.055f && dy >= 0.28f && dy <= 0.55f) ||
+                               (dy <= 0.055f && dx >= 0.28f && dx <= 0.55f);
+
+                if (brightDiamond || centerDiamond || axisTick)
+                    pixels[y * size + x] = new Color32(255, 255, 255, 255);
+                else if (outerOutline)
+                    pixels[y * size + x] = new Color32(24, 28, 24, 230);
+                else
+                    pixels[y * size + x] = new Color32(0, 0, 0, 0);
             }
             texture.SetPixels32(pixels);
             texture.Apply(false, true);
             var sprite = Sprite.Create(texture, new Rect(0f, 0f, size, size), new Vector2(0.5f, 0.5f), size);
-            sprite.name = "CommandRing";
+            sprite.name = "CommandMarker";
             return sprite;
         }
 
         private sealed class CommandRing
         {
-            private const float Lifetime = 0.34f;
+            private const float Lifetime = 0.72f;
             private readonly Transform _transform;
             private readonly SpriteRenderer _renderer;
             private float _age;
@@ -117,11 +128,11 @@ namespace Panteon.Gameplay.Feedback
                 _age = 0f;
                 _size = cellSize;
                 _color = type == CommandFeedbackType.Attack
-                    ? new Color(1f, 0.18f, 0.12f, 1f)
-                    : new Color(0.36f, 0.72f, 0.28f, 1f);
+                    ? new Color(1f, 0.2f, 0.12f, 1f)
+                    : new Color(0.52f, 0.78f, 0.18f, 1f);
                 position.z = 0f;
                 _transform.position = position;
-                _transform.localScale = Vector3.one * (_size * 0.35f);
+                _transform.localScale = Vector3.one * (_size * 1.2f);
                 _renderer.color = _color;
                 _transform.gameObject.SetActive(true);
             }
@@ -131,10 +142,11 @@ namespace Panteon.Gameplay.Feedback
                 _age += deltaTime;
                 if (_age >= Lifetime) return false;
                 var t = _age / Lifetime;
-                var eased = 1f - (1f - t) * (1f - t);
-                _transform.localScale = Vector3.one * (_size * Mathf.Lerp(0.35f, 1.05f, eased));
+                var settle = 1f - Mathf.Pow(1f - Mathf.Clamp01(t / 0.32f), 3f);
+                var pulse = t > 0.32f ? Mathf.Sin((t - 0.32f) * Mathf.PI * 4f) * 0.04f : 0f;
+                _transform.localScale = Vector3.one * (_size * (Mathf.Lerp(1.2f, 0.92f, settle) + pulse));
                 var color = _color;
-                color.a = 1f - t;
+                color.a = t < 0.68f ? 1f : 1f - Mathf.InverseLerp(0.68f, 1f, t);
                 _renderer.color = color;
                 return true;
             }

@@ -24,6 +24,9 @@ namespace Panteon.UI
         private Vector2 _buttonSize;
         private float _spacing;
         private float _padding;
+        private float _rowStride;
+        private bool _suppressScrollCallback;
+        private bool _infiniteScrollEnabled;
 
         public event Action<BuildingDefinitionSO> BuildingRequested;
 
@@ -44,7 +47,10 @@ namespace Panteon.UI
             _content = bindings.Content;
             _status = bindings.Status;
             _buttons.AddRange(bindings.Cards);
+            _scrollRect.onValueChanged.AddListener(HandleScrollValueChanged);
         }
+
+        public void Dispose() => _scrollRect.onValueChanged.RemoveListener(HandleScrollValueChanged);
 
         public void SetBuildings(IEnumerable<BuildingDefinitionSO> buildings)
         {
@@ -74,24 +80,7 @@ namespace Panteon.UI
             _padding = Mathf.Round(_factory.Scaled(6f));
             var cell = Mathf.Max(_factory.Scaled(42f), (scrollWidth - _padding * 2f - _spacing) * 0.5f);
             _buttonSize = new Vector2(cell, cell + _factory.Scaled(12f));
-            var rows = Mathf.Max(1, Mathf.CeilToInt(_buildings.Count / (float)ColumnCount));
-            var contentHeight = _padding * 2f + rows * (_buttonSize.y + _spacing) - _spacing;
-            _content.sizeDelta = new Vector2(0f, Mathf.Max(1f, contentHeight));
-            _scrollRect.vertical = contentHeight > _viewport.rect.height;
-
-            for (var i = 0; i < _buttons.Count; i++)
-            {
-                var row = i / ColumnCount;
-                var column = i % ColumnCount;
-                HudViewFactory.SetRect(_buttons[i].Root, new Rect(
-                    _padding + column * (_buttonSize.x + _spacing),
-                    _padding + row * (_buttonSize.y + _spacing),
-                    _buttonSize.x, _buttonSize.y));
-                _factory.LayoutButton(_buttons[i]);
-                if (i < _buildings.Count)
-                    _factory.LayoutButtonIconByContentHeight(
-                        _buttons[i], _buildings[i].Icon, _buildings[i].VisualContentRect);
-            }
+            ConfigureScrollContent(false);
         }
 
         public void RefreshContentLayout()
@@ -105,26 +94,7 @@ namespace Panteon.UI
             _spacing = 20f;
             _padding = Mathf.Max(0f,
                 (scrollWidth - ColumnCount * _buttonSize.x - (ColumnCount - 1) * _spacing) * 0.5f);
-            var rows = Mathf.Max(1, Mathf.CeilToInt(_buildings.Count / (float)ColumnCount));
-            var contentHeight = _padding * 2f + rows * (_buttonSize.y + _spacing) - _spacing;
-            _content.sizeDelta = new Vector2(0f, Mathf.Max(1f, contentHeight));
-            _scrollRect.vertical = contentHeight > scrollHeight;
-
-            for (var i = 0; i < _buttons.Count; i++)
-            {
-                var active = i < _buildings.Count;
-                _buttons[i].gameObject.SetActive(active);
-                if (!active) continue;
-                var row = i / ColumnCount;
-                var column = i % ColumnCount;
-                HudViewFactory.SetRect(_buttons[i].Root, new Rect(
-                    _padding + column * (_buttonSize.x + _spacing),
-                    _padding + row * (_buttonSize.y + _spacing),
-                    _buttonSize.x, _buttonSize.y));
-                _factory.LayoutButton(_buttons[i]);
-                _factory.LayoutButtonIconByContentHeight(
-                    _buttons[i], _buildings[i].Icon, _buildings[i].VisualContentRect);
-            }
+            ConfigureScrollContent(false);
         }
 
         private void RebuildButtons()
@@ -153,6 +123,7 @@ namespace Panteon.UI
             _content.anchoredPosition = Vector2.zero;
             _scrollRect.verticalNormalizedPosition = 1f;
             RefreshContentLayout();
+            ConfigureScrollContent(true);
         }
 
         private void EnsureButtonPool(int requiredCount)
@@ -171,5 +142,92 @@ namespace Panteon.UI
                 _buttons.Add(card);
             }
         }
+
+        private void ConfigureScrollContent(bool resetToStart)
+        {
+            _rowStride = Mathf.Max(1f, _buttonSize.y + _spacing);
+            var sourceRows = SourceRowCount;
+            var cycleHeight = sourceRows * _rowStride;
+            var naturalHeight = _padding * 2f +
+                                sourceRows * _buttonSize.y +
+                                Mathf.Max(0, sourceRows - 1) * _spacing;
+            _infiniteScrollEnabled = naturalHeight > _viewport.rect.height + 0.5f;
+            var contentHeight = _infiniteScrollEnabled
+                ? Mathf.Max(_viewport.rect.height + cycleHeight * 2f, naturalHeight)
+                : naturalHeight;
+
+            _suppressScrollCallback = true;
+            if (resetToStart || !_infiniteScrollEnabled)
+                _content.anchoredPosition = Vector2.zero;
+            _content.sizeDelta = new Vector2(_content.sizeDelta.x, Mathf.Max(1f, contentHeight));
+            _scrollRect.vertical = _infiniteScrollEnabled;
+            if (!_infiniteScrollEnabled) _scrollRect.velocity = Vector2.zero;
+            _suppressScrollCallback = false;
+
+            PositionRecycledCards();
+        }
+
+        private void HandleScrollValueChanged(Vector2 _)
+        {
+            if (_suppressScrollCallback || !_infiniteScrollEnabled || _buildings.Count == 0) return;
+            ExtendContentIfNeeded();
+            PositionRecycledCards();
+        }
+
+        private void ExtendContentIfNeeded()
+        {
+            var sourceRows = SourceRowCount;
+            var cycleHeight = sourceRows * _rowStride;
+            var scrollY = Mathf.Max(0f, _content.anchoredPosition.y);
+            var remaining = _content.rect.height - _viewport.rect.height - scrollY;
+            if (remaining > cycleHeight * 1.5f) return;
+
+            _suppressScrollCallback = true;
+            _content.sizeDelta = new Vector2(
+                _content.sizeDelta.x,
+                _content.rect.height + cycleHeight * 4f);
+            _suppressScrollCallback = false;
+        }
+
+        private void PositionRecycledCards()
+        {
+            if (_rowStride <= 0f) return;
+            var sourceRows = SourceRowCount;
+            var firstVisibleRow = 0;
+            var cycleStartRow = 0;
+            if (_infiniteScrollEnabled)
+            {
+                var scrollY = Mathf.Max(0f, _content.anchoredPosition.y - _padding);
+                firstVisibleRow = Mathf.Max(0, Mathf.FloorToInt(scrollY / _rowStride));
+                cycleStartRow = firstVisibleRow / sourceRows * sourceRows;
+            }
+
+            for (var i = 0; i < _buttons.Count; i++)
+            {
+                var active = i < _buildings.Count;
+                var button = _buttons[i];
+                button.gameObject.SetActive(active);
+                if (!active) continue;
+
+                var sourceRow = i / ColumnCount;
+                var column = i % ColumnCount;
+                var virtualRow = cycleStartRow + sourceRow;
+                if (virtualRow < firstVisibleRow) virtualRow += sourceRows;
+
+                HudViewFactory.SetRect(button.Root, new Rect(
+                    _padding + column * (_buttonSize.x + _spacing),
+                    _padding + virtualRow * _rowStride,
+                    _buttonSize.x,
+                    _buttonSize.y));
+                _factory.LayoutButton(button);
+                _factory.LayoutButtonIconByContentHeight(
+                    button,
+                    _buildings[i].Icon,
+                    _buildings[i].VisualContentRect);
+            }
+        }
+
+        private int SourceRowCount =>
+            Mathf.Max(1, Mathf.CeilToInt(_buildings.Count / (float)ColumnCount));
     }
 }

@@ -41,6 +41,7 @@ namespace Panteon.Gameplay.Buildings
             _prefabs[building] = definition.Prefab;
             building.Initialize(definition, cell, _grid, _bus, Return);
             instance.GetComponent<BuildingView>()?.Render(definition);
+            building.PlayPlacementFeedback();
             building.OccupyGrid();
             _bus.Publish(new BuildingPlaced(building));
             return building;

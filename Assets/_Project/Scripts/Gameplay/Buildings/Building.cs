@@ -58,7 +58,12 @@ namespace Panteon.Gameplay.Buildings
                 _production = gameObject.AddComponent<ProductionComponent>();
             _production?.Initialize(definition.CanProduce ? definition.Producibles : null);
             name = $"BLD_{definition.DisplayName.Replace(" ", string.Empty)}_{GetInstanceID():000}";
+        }
+
+        public void PlayPlacementFeedback()
+        {
             PlayRevealSpawnFeedback();
+            _bus?.Publish(new CameraShakeRequested(0.035f, 0.1f));
         }
 
         public void TakeDamage(int amount) => Health.TakeDamage(amount);

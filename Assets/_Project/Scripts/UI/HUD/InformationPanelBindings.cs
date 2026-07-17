@@ -51,8 +51,6 @@ namespace Panteon.UI
         [SerializeField] private Text _buildingDescription;
         [SerializeField] private Text _buildingHealthStat;
         [SerializeField] private Image _buildingSeparator;
-        [SerializeField] private Button _destroyButton;
-        [SerializeField] private Text _destroyButtonLabel;
 
         public RectTransform Root => (RectTransform)transform;
         public Image HeaderPlate => _headerPlate;
@@ -91,8 +89,6 @@ namespace Panteon.UI
         public Text BuildingDescription => _buildingDescription;
         public Text BuildingHealthStat => _buildingHealthStat;
         public Image BuildingSeparator => _buildingSeparator;
-        public Button DestroyButton => _destroyButton;
-        public Text DestroyButtonLabel => _destroyButtonLabel;
 
         public void ValidateReferences()
         {

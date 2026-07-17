@@ -51,7 +51,7 @@ namespace Panteon.UI
         {
             UnsubscribeFromEvents();
             if (_productionView != null) _productionView.BuildingRequested -= HandleBuildingRequested;
-            if (_informationView != null) _informationView.DestroyRequested -= HandleDestroyRequested;
+            _productionView?.Dispose();
             _boardViewport?.Dispose();
             _viewFactory?.Dispose();
         }
@@ -93,7 +93,6 @@ namespace Panteon.UI
             _boardViewport = new BoardViewportController(_boardCamera, _gridSize, _gridOrigin, _cellSize, _boardPaddingPercent);
 
             _productionView.BuildingRequested += HandleBuildingRequested;
-            _informationView.DestroyRequested += HandleDestroyRequested;
             _productionView.SetBuildings(_buildings);
             _productionView.RefreshContentLayout();
             _boardRect = _hud.GetBoardScreenRect();
@@ -121,12 +120,6 @@ namespace Panteon.UI
 
         private void HandleBuildingRequested(BuildingDefinitionSO definition) =>
             _placementService?.EnterPlacementMode(definition);
-
-        private static void HandleDestroyRequested(IDamageable target)
-        {
-            if (target == null || target.IsDead) return;
-            target.TakeDamage(target.CurrentHP);
-        }
 
         private void HandleBuildingSelected(BuildingSelected message)
         {
