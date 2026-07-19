@@ -66,8 +66,18 @@ namespace Panteon.Gameplay.Feedback
             renderer.sprite = _markerSprite;
             renderer.sharedMaterial = _material;
             renderer.sortingOrder = 75;
+
+            var outlineOwner = new GameObject("WhiteOutline");
+            outlineOwner.transform.SetParent(owner.transform, false);
+            outlineOwner.transform.localScale = Vector3.one * 1.13f;
+            var outlineRenderer = outlineOwner.AddComponent<SpriteRenderer>();
+            outlineRenderer.sprite = _markerSprite;
+            outlineRenderer.sharedMaterial = _material;
+            outlineRenderer.sortingOrder = 74;
+            outlineRenderer.color = Color.white;
+
             owner.SetActive(false);
-            return new CommandRing(owner.transform, renderer);
+            return new CommandRing(owner.transform, renderer, outlineRenderer);
         }
 
         private static Sprite CreateMarkerSprite()
@@ -88,16 +98,13 @@ namespace Panteon.Gameplay.Feedback
                 var dx = Mathf.Abs((x - center) / center);
                 var dy = Mathf.Abs((y - center) / center);
                 var diamondDistance = dx + dy;
-                var outerOutline = diamondDistance >= 0.67f && diamondDistance <= 0.91f;
-                var brightDiamond = diamondDistance >= 0.72f && diamondDistance <= 0.84f;
+                var brightDiamond = diamondDistance >= 0.68f && diamondDistance <= 0.88f;
                 var centerDiamond = diamondDistance <= 0.17f;
                 var axisTick = (dx <= 0.055f && dy >= 0.28f && dy <= 0.55f) ||
                                (dy <= 0.055f && dx >= 0.28f && dx <= 0.55f);
 
                 if (brightDiamond || centerDiamond || axisTick)
                     pixels[y * size + x] = new Color32(255, 255, 255, 255);
-                else if (outerOutline)
-                    pixels[y * size + x] = new Color32(24, 28, 24, 230);
                 else
                     pixels[y * size + x] = new Color32(0, 0, 0, 0);
             }
@@ -110,17 +117,19 @@ namespace Panteon.Gameplay.Feedback
 
         private sealed class CommandRing
         {
-            private const float Lifetime = 0.72f;
+            private const float Lifetime = 0.82f;
             private readonly Transform _transform;
             private readonly SpriteRenderer _renderer;
+            private readonly SpriteRenderer _outlineRenderer;
             private float _age;
             private float _size;
             private Color _color;
 
-            public CommandRing(Transform transform, SpriteRenderer renderer)
+            public CommandRing(Transform transform, SpriteRenderer renderer, SpriteRenderer outlineRenderer)
             {
                 _transform = transform;
                 _renderer = renderer;
+                _outlineRenderer = outlineRenderer;
             }
 
             public void Show(Vector3 position, CommandFeedbackType type, float cellSize)
@@ -132,8 +141,9 @@ namespace Panteon.Gameplay.Feedback
                     : new Color(0.52f, 0.78f, 0.18f, 1f);
                 position.z = 0f;
                 _transform.position = position;
-                _transform.localScale = Vector3.one * (_size * 1.2f);
+                _transform.localScale = Vector3.one * (_size * 1.46f);
                 _renderer.color = _color;
+                _outlineRenderer.color = Color.white;
                 _transform.gameObject.SetActive(true);
             }
 
@@ -143,11 +153,12 @@ namespace Panteon.Gameplay.Feedback
                 if (_age >= Lifetime) return false;
                 var t = _age / Lifetime;
                 var settle = 1f - Mathf.Pow(1f - Mathf.Clamp01(t / 0.32f), 3f);
-                var pulse = t > 0.32f ? Mathf.Sin((t - 0.32f) * Mathf.PI * 4f) * 0.04f : 0f;
-                _transform.localScale = Vector3.one * (_size * (Mathf.Lerp(1.2f, 0.92f, settle) + pulse));
+                var pulse = t > 0.32f ? Mathf.Sin((t - 0.32f) * Mathf.PI * 4f) * 0.055f : 0f;
+                _transform.localScale = Vector3.one * (_size * (Mathf.Lerp(1.46f, 1.12f, settle) + pulse));
                 var color = _color;
                 color.a = t < 0.68f ? 1f : 1f - Mathf.InverseLerp(0.68f, 1f, t);
                 _renderer.color = color;
+                _outlineRenderer.color = new Color(1f, 1f, 1f, color.a * 0.95f);
                 return true;
             }
 

@@ -64,9 +64,7 @@ namespace Panteon.Gameplay.Combat
 
     public sealed class DamageFeedbackView : MonoBehaviour
     {
-        private const float CriticalSmokeHealthRatio = 0.35f;
         private ParticleSystem _particles;
-        private ParticleSystem _criticalSmokeParticles;
         private IDamageable _source;
         private int _lastHp = -1;
         private Coroutine _visualRoutine;
@@ -79,7 +77,6 @@ namespace Panteon.Gameplay.Combat
         private bool _hasImpactOrigin;
         private bool _isStructure;
         private bool _particlesConfigured;
-        private float _criticalSmokeSeverity;
 
         public static DamageFeedbackView Ensure(GameObject owner)
         {
@@ -106,10 +103,8 @@ namespace Panteon.Gameplay.Combat
             if (_source == null) return;
             var owner = transform.parent;
             _isStructure = owner != null && owner.GetComponent<Building>() != null;
-            if (_isStructure) EnsureCriticalSmokeParticles();
             _lastHp = _source.CurrentHP;
             _source.OnHealthChanged += HandleHealthChanged;
-            UpdateStructuralSmoke(_source.CurrentHP, _source.MaxHP);
         }
 
         public void PlaySpawn()
@@ -148,9 +143,6 @@ namespace Panteon.Gameplay.Combat
             _hasImpactOrigin = false;
             if (_particles != null)
                 _particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-            if (_criticalSmokeParticles != null)
-                _criticalSmokeParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-            _criticalSmokeSeverity = 0f;
         }
 
         private void OnDisable()
@@ -165,13 +157,7 @@ namespace Panteon.Gameplay.Combat
             {
                 Play();
             }
-            UpdateStructuralSmoke(current, max);
             _lastHp = current;
-        }
-
-        private void LateUpdate()
-        {
-            if (_criticalSmokeSeverity > 0f) UpdateCriticalSmokeOrigin();
         }
 
         private void Play()
@@ -181,21 +167,26 @@ namespace Panteon.Gameplay.Combat
             var hasVisual = TryCaptureVisual();
             var center = hasVisual ? _visualRenderer.bounds.center : transform.position;
             var particleOrigin = hasVisual
-                ? ResolveImpactPoint(center, _visualRenderer.bounds.extents)
+                ? _isStructure
+                    ? ResolveRandomStructureImpactPoint(_visualRenderer.bounds)
+                    : ResolveImpactPoint(center, _visualRenderer.bounds.extents)
                 : center;
             EmitImpactParticles(particleOrigin);
             if (hasVisual) _visualRoutine = StartCoroutine(HitRoutine());
             _hasImpactOrigin = false;
         }
 
+        private static Vector3 ResolveRandomStructureImpactPoint(Bounds bounds)
+        {
+            return bounds.center +
+                   Vector3.right * UnityEngine.Random.Range(-bounds.extents.x * 0.62f, bounds.extents.x * 0.62f) +
+                   Vector3.up * UnityEngine.Random.Range(-bounds.extents.y * 0.48f, bounds.extents.y * 0.58f);
+        }
+
         private Vector3 ResolveImpactPoint(Vector3 center, Vector3 extents)
         {
             if (!_hasImpactOrigin) return center;
-            // Organic targets spray through the far side. Structures emit dust and
-            // smoke from the struck face, towards the attacker.
-            var surfaceDirection = _isStructure
-                ? _impactOrigin - center
-                : center - _impactOrigin;
+            var surfaceDirection = center - _impactOrigin;
             surfaceDirection.z = 0f;
             if (surfaceDirection.sqrMagnitude <= 0.0001f) return center;
             surfaceDirection.Normalize();
@@ -458,52 +449,6 @@ namespace Panteon.Gameplay.Combat
             }
         }
 
-        private void UpdateStructuralSmoke(int current, int max)
-        {
-            if (!_isStructure || _criticalSmokeParticles == null)
-            {
-                _criticalSmokeSeverity = 0f;
-                return;
-            }
-
-            var normalized = max > 0 ? Mathf.Clamp01((float)current / max) : 0f;
-            var severity = current > 0
-                ? Mathf.InverseLerp(CriticalSmokeHealthRatio, 0.05f, normalized)
-                : 0f;
-            if (severity <= 0f)
-            {
-                var emission = _criticalSmokeParticles.emission;
-                emission.rateOverTime = 0f;
-                if (_criticalSmokeParticles.isPlaying)
-                    _criticalSmokeParticles.Stop(true, ParticleSystemStopBehavior.StopEmitting);
-                _criticalSmokeSeverity = 0f;
-                return;
-            }
-
-            UpdateCriticalSmokeOrigin();
-            var criticalEmission = _criticalSmokeParticles.emission;
-            criticalEmission.rateOverTime = Mathf.Lerp(8f, 28f, Mathf.Pow(severity, 1.25f));
-            if (!_criticalSmokeParticles.isPlaying)
-            {
-                _criticalSmokeParticles.Play(true);
-                _criticalSmokeParticles.Emit(Mathf.RoundToInt(Mathf.Lerp(5f, 10f, severity)));
-            }
-            _criticalSmokeSeverity = severity;
-        }
-
-        private void UpdateCriticalSmokeOrigin()
-        {
-            if (_criticalSmokeParticles == null) return;
-            var owner = transform.parent;
-            if (owner == null) return;
-            var provider = owner.GetComponent<IEntityVisualProvider>();
-            var renderer = provider != null ? provider.VisualRenderer : owner.GetComponent<SpriteRenderer>();
-            if (renderer == null || !renderer.enabled) return;
-            var bounds = renderer.bounds;
-            _criticalSmokeParticles.transform.position =
-                bounds.center + Vector3.up * (bounds.extents.y * 0.62f);
-        }
-
         private void StopVisualRoutine(bool restore)
         {
             if (_visualRoutine != null) StopCoroutine(_visualRoutine);
@@ -581,95 +526,6 @@ namespace Panteon.Gameplay.Combat
             renderer.sharedMaterial = CombatParticleMaterial.Shared;
             renderer.sortingOrder = 60;
             _particlesConfigured = true;
-        }
-
-        private void EnsureCriticalSmokeParticles()
-        {
-            if (_criticalSmokeParticles != null) return;
-            var smokeRoot = transform.Find("CriticalSmoke");
-            if (smokeRoot == null)
-            {
-                smokeRoot = new GameObject("CriticalSmoke").transform;
-                smokeRoot.SetParent(transform, false);
-            }
-
-            _criticalSmokeParticles = smokeRoot.GetComponent<ParticleSystem>();
-            if (_criticalSmokeParticles == null)
-                _criticalSmokeParticles = smokeRoot.gameObject.AddComponent<ParticleSystem>();
-            _criticalSmokeParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-
-            var main = _criticalSmokeParticles.main;
-            main.playOnAwake = false;
-            main.loop = true;
-            main.duration = 1f;
-            main.maxParticles = 80;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(0.9f, 1.5f);
-            main.startSpeed = 0f;
-            main.startSize = new ParticleSystem.MinMaxCurve(0.28f, 0.55f);
-            main.startColor = new ParticleSystem.MinMaxGradient(
-                new Color(0.44f, 0.41f, 0.36f, 0.92f),
-                new Color(0.13f, 0.15f, 0.15f, 0.94f));
-            main.simulationSpace = ParticleSystemSimulationSpace.World;
-
-            var emission = _criticalSmokeParticles.emission;
-            emission.enabled = true;
-            emission.rateOverTime = 0f;
-
-            var shape = _criticalSmokeParticles.shape;
-            shape.enabled = true;
-            shape.shapeType = ParticleSystemShapeType.Circle;
-            shape.radius = 0.24f;
-
-            var velocity = _criticalSmokeParticles.velocityOverLifetime;
-            velocity.enabled = true;
-            velocity.space = ParticleSystemSimulationSpace.World;
-            // Unity validates the three axes after each assignment, so keep all
-            // curves in Constant mode. The noise module supplies lateral variance.
-            velocity.x = 0f;
-            velocity.y = 0.32f;
-            velocity.z = 0f;
-
-            var noise = _criticalSmokeParticles.noise;
-            noise.enabled = true;
-            noise.strength = 0.15f;
-            noise.frequency = 0.65f;
-            noise.scrollSpeed = 0.22f;
-            noise.damping = true;
-
-            var colorOverLifetime = _criticalSmokeParticles.colorOverLifetime;
-            colorOverLifetime.enabled = true;
-            colorOverLifetime.color = new ParticleSystem.MinMaxGradient(
-                new Gradient
-                {
-                    colorKeys = new[]
-                    {
-                        new GradientColorKey(new Color(0.56f, 0.52f, 0.44f), 0f),
-                        new GradientColorKey(new Color(0.24f, 0.26f, 0.25f), 0.5f),
-                        new GradientColorKey(new Color(0.09f, 0.1f, 0.1f), 1f)
-                    },
-                    alphaKeys = new[]
-                    {
-                        new GradientAlphaKey(0.2f, 0f),
-                        new GradientAlphaKey(0.92f, 0.12f),
-                        new GradientAlphaKey(0.62f, 0.68f),
-                        new GradientAlphaKey(0f, 1f)
-                    }
-                });
-
-            var sizeOverLifetime = _criticalSmokeParticles.sizeOverLifetime;
-            sizeOverLifetime.enabled = true;
-            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(
-                1f,
-                new AnimationCurve(
-                    new Keyframe(0f, 0.72f),
-                    new Keyframe(0.38f, 1.18f),
-                    new Keyframe(1f, 1.55f)));
-
-            var particleRenderer = _criticalSmokeParticles.GetComponent<ParticleSystemRenderer>();
-            particleRenderer.enabled = true;
-            particleRenderer.renderMode = ParticleSystemRenderMode.Billboard;
-            particleRenderer.sharedMaterial = CombatParticleMaterial.Shared;
-            particleRenderer.sortingOrder = 59;
         }
 
         private void Unbind()
