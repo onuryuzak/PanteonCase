@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace Panteon.Core
 {
+    // One pool per prefab.
     public sealed class ObjectPool
     {
         private readonly GameObject _prefab;
@@ -22,6 +23,7 @@ namespace Panteon.Core
         {
             var instance = _inactive.Count > 0 ? _inactive.Pop() : CreateNew();
             instance.SetActive(true);
+            // Activate first; some pool hooks need enabled child components.
             NotifyPoolables(instance, item => item.OnTakenFromPool());
             return instance;
         }
@@ -29,6 +31,7 @@ namespace Panteon.Core
         public void Return(GameObject instance)
         {
             if (instance == null) return;
+            // Give components a chance to stop coroutines before hiding the object.
             NotifyPoolables(instance, item => item.OnReturnedToPool());
             instance.SetActive(false);
             instance.transform.SetParent(_parent, false);

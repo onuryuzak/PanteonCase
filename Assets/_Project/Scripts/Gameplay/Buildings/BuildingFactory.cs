@@ -7,6 +7,7 @@ using UnityEngine;
 
 namespace Panteon.Gameplay.Buildings
 {
+    // Building setup stays here so fresh and pooled instances behave the same.
     public sealed class BuildingFactory
     {
         private readonly PoolManager _pool;
@@ -33,11 +34,13 @@ namespace Panteon.Gameplay.Buildings
                 return null;
             }
 
+            // Do not skip setup for pooled buildings; their previous state is still attached.
             var instance = _pool.Get(definition.Prefab, _root);
             instance.transform.SetParent(_root, false);
             instance.transform.position = _grid.AreaToWorldCenter(cell, definition.FootprintSize);
             var building = instance.GetComponent<Building>();
             if (building == null) throw new InvalidOperationException("Building prefab needs a Building component.");
+            // Save the prefab key now; it is needed when the building is recycled.
             _prefabs[building] = definition.Prefab;
             building.Initialize(definition, cell, _grid, _bus, Return);
             instance.GetComponent<BuildingView>()?.Render(definition);

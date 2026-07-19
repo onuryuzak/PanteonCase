@@ -5,6 +5,7 @@ namespace Panteon.Data
     public enum UnitAttackRangeType { CloseRange, Ranged }
 
     [CreateAssetMenu(menuName = "Panteon/Unit Visual Profile", fileName = "SO_UnitVisual")]
+    // Art-specific offsets and animation settings live here, away from unit stats.
     public sealed class UnitVisualProfileSO : ScriptableObject
     {
         [SerializeField] private RuntimeAnimatorController _controller;

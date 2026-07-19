@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace Panteon.Core
 {
+    // Gameplay and HUD talk through this bus instead of referencing each other.
     public sealed class EventBus
     {
         private readonly Dictionary<Type, Delegate> _subscribers = new Dictionary<Type, Delegate>();
@@ -28,6 +29,7 @@ namespace Panteon.Core
         public void Publish<T>(T message)
         {
             Delegate existing;
+            // Keep this synchronous. The HUD expects selection to be current right away.
             if (_subscribers.TryGetValue(typeof(T), out existing))
                 ((Action<T>)existing)?.Invoke(message);
         }

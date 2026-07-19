@@ -6,6 +6,7 @@ using UnityEngine;
 namespace Panteon.Gameplay
 {
     [RequireComponent(typeof(HealthComponent), typeof(SelectableComponent))]
+    // Shared setup used by both Unit and Building.
     public abstract class Entity : MonoBehaviour, ISelectable, ICombatFeedbackReceiver
     {
         protected HealthComponent Health { get; private set; }

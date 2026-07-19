@@ -4,6 +4,7 @@ using UnityEngine;
 namespace Panteon.Data
 {
     [CreateAssetMenu(menuName = "Panteon/Building Definition", fileName = "SO_Building")]
+    // Designers can add a building without changing the production menu code.
     public sealed class BuildingDefinitionSO : ScriptableObject
     {
         [SerializeField] private string _displayName = "Building";

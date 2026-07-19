@@ -27,6 +27,7 @@ namespace Panteon.Gameplay
         [SerializeField, Min(1)] private int _prewarmPerFrame = 4;
         private ProductionService _productionService;
 
+        // Register these first; Awake calls elsewhere may request them.
         private void Awake()
         {
             if (_poolManager == null) _poolManager = GetComponentInChildren<PoolManager>(true);
@@ -59,6 +60,7 @@ namespace Panteon.Gameplay
             StartCoroutine(PrewarmCatalogPrefabs());
         }
 
+        // Prewarm gradually so opening the scene does not hitch.
         private IEnumerator PrewarmCatalogPrefabs()
         {
             if (_catalog == null || _poolManager == null) yield break;

@@ -3,8 +3,7 @@ using UnityEngine;
 namespace Panteon.UI
 {
     /// <summary>
-    /// Scene-facing references owned by the authored RuntimeHUD prefab.
-    /// Layout and styling belong to the prefab; controllers only bind data and events.
+    /// Serialized references from RuntimeHUD.prefab.
     /// </summary>
     public sealed class RuntimeHudView : MonoBehaviour
     {

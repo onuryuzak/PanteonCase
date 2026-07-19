@@ -62,6 +62,7 @@ namespace Panteon.Gameplay.Combat
         }
     }
 
+    // Plays the lightweight effects attached to an entity.
     public sealed class DamageFeedbackView : MonoBehaviour
     {
         private ParticleSystem _particles;
@@ -115,6 +116,7 @@ namespace Panteon.Gameplay.Combat
 
         public void PrepareImpact(Vector3 sourceWorldPosition)
         {
+            // Save the hit direction; blood should travel away from the attacker.
             _impactOrigin = sourceWorldPosition;
             _hasImpactOrigin = true;
         }
@@ -166,6 +168,7 @@ namespace Panteon.Gameplay.Combat
             StopVisualRoutine(true);
             var hasVisual = TryCaptureVisual();
             var center = hasVisual ? _visualRenderer.bounds.center : transform.position;
+            // Dust moves around the building, while unit hits follow the attack direction.
             var particleOrigin = hasVisual
                 ? _isStructure
                     ? ResolveRandomStructureImpactPoint(_visualRenderer.bounds)

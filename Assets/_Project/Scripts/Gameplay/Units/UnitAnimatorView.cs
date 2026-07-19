@@ -7,6 +7,7 @@ using UnityEngine;
 namespace Panteon.Gameplay.Units
 {
     [DisallowMultipleComponent]
+    // Bridges UnitState to the Tiny Swords Animator.
     public sealed class UnitAnimatorView : MonoBehaviour, IEntityVisualProvider
     {
         private const string VisualName = "TinySwordsVisual";
@@ -44,6 +45,7 @@ namespace Panteon.Gameplay.Units
         {
             Release();
             _profile = profile;
+            // Cache state hashes once; animation playback uses them often.
             _animations = profile != null ? UnitAnimationMap.Create(profile.Controller) : null;
             _stateMachine = stateMachine;
             EnsureVisual();
@@ -144,8 +146,7 @@ namespace Panteon.Gameplay.Units
                 _animator.speed = 1f;
                 Play(deathHash, true);
 
-                // Wait for the Animator state itself instead of estimating from clip length.
-                // State speed, frame rate, or culling must not return the unit early.
+                // Clip length is unreliable here; wait for the Animator's last frame.
                 var timeout = Mathf.Max(0.5f, _animations.DeathDuration * 3f);
                 var elapsed = 0f;
                 while (elapsed < timeout)
@@ -156,7 +157,7 @@ namespace Panteon.Gameplay.Units
                     yield return null;
                 }
 
-                // Keep the final death frame visible for one rendered frame.
+                // Give Unity one frame to draw the final death pose.
                 yield return null;
                 _animator.cullingMode = previousCullingMode;
             }
@@ -185,8 +186,7 @@ namespace Panteon.Gameplay.Units
                     yield return null;
                 }
 
-                // The pool hides the unit after this routine completes. Keeping the
-                // renderer opaque here prevents it vanishing before the death pose ends.
+                // Pooling hides the object next, so keep the death pose opaque here.
                 yield return null;
             }
 
@@ -258,6 +258,7 @@ namespace Panteon.Gameplay.Units
         private void Play(int stateHash, bool restart = false)
         {
             if (_animator == null || stateHash == 0) return;
+            // Optional clips are not guaranteed, so fall back to idle quietly.
             if (!_animator.HasState(0, stateHash))
             {
                 var idleHash = _animations != null ? _animations.IdleHash : 0;

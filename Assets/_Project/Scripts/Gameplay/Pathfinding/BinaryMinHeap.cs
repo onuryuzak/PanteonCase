@@ -2,6 +2,7 @@ using System;
 
 namespace Panteon.Gameplay.Pathfinding
 {
+    // Minimal heap implementation used only by A*.
     public sealed class BinaryMinHeap<T> where T : IHeapItem<T>
     {
         private T[] _items;
@@ -21,6 +22,7 @@ namespace Panteon.Gameplay.Pathfinding
         public T RemoveFirst()
         {
             if (Count == 0) throw new InvalidOperationException("Heap is empty.");
+            // The cheapest node is always at index zero.
             var first = _items[0];
             Count--;
             if (Count > 0)

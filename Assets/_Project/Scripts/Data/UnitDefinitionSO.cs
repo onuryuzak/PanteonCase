@@ -3,6 +3,7 @@ using UnityEngine;
 namespace Panteon.Data
 {
     [CreateAssetMenu(menuName = "Panteon/Unit Definition", fileName = "SO_Unit")]
+    // Unit stats stay in assets so new catalog entries do not need code changes.
     public sealed class UnitDefinitionSO : ScriptableObject
     {
         [SerializeField] private string _displayName = "Soldier";

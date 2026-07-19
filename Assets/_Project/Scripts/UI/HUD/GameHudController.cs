@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Panteon.UI
 {
     /// <summary>
-    /// Runtime HUD composition root. It coordinates views and domain events; rendering and layout live in dedicated collaborators.
+    /// Connects HUD views to gameplay events.
     /// </summary>
     public sealed class GameHudController : MonoBehaviour, IInputBlocker
     {

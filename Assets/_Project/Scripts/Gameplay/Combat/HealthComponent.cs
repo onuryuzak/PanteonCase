@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace Panteon.Gameplay.Combat
 {
+    // Units and buildings use the same damage and death flow.
     public sealed class HealthComponent : MonoBehaviour, IDamageable
     {
         [SerializeField] private Faction _faction = Faction.Player;
@@ -25,6 +26,7 @@ namespace Panteon.Gameplay.Combat
 
         public void TakeDamage(int amount)
         {
+            // Ignore damage after death so OnDied cannot fire twice.
             if (amount <= 0 || IsDead) return;
             CurrentHP = Mathf.Max(0, CurrentHP - amount);
             OnHealthChanged?.Invoke(CurrentHP, MaxHP);

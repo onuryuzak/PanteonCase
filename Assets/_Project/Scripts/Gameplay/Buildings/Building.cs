@@ -6,6 +6,7 @@ using UnityEngine;
 
 namespace Panteon.Gameplay.Buildings
 {
+    // Keeps the placed building tied to its health, footprint and production data.
     public class Building : Entity, IProductionBuilding, IPoolable
     {
         private GridManager _grid;
@@ -85,8 +86,7 @@ namespace Panteon.Gameplay.Buildings
             var bestDistance = int.MaxValue;
             var footprint = Definition.FootprintSize;
 
-            // Evaluate every orthogonal edge around the footprint. The preferred
-            // SO offset still wins when open; otherwise the closest open edge wins.
+            // The preferred marker is blocked, so check all four building edges.
             for (var x = 0; x < footprint.x; x++)
             {
                 ConsiderSpawnCandidate(GridPosition + new Vector2Int(x, -1), preferred, ref bestCell, ref bestDistance);

@@ -14,6 +14,7 @@ namespace Panteon.Data
         Down
     }
 
+    // Tiny Swords has five directions; left-facing clips use sprite flipping.
     public static class UnitAnimationContract
     {
         public static UnitAnimationDirection ResolveDirection(Vector2 direction)
@@ -29,6 +30,7 @@ namespace Panteon.Data
         public static int StateHash(string stateName) => Animator.StringToHash($"Base Layer.{stateName}");
     }
 
+    // Cached Animator state lookup for one visual profile.
     public sealed class UnitAnimationMap
     {
         private readonly int[] _attackHashes;
@@ -63,6 +65,7 @@ namespace Panteon.Data
 
         public static UnitAnimationMap Create(RuntimeAnimatorController controller)
         {
+            // Clip names are the contract, so profiles need no state table.
             var clips = controller != null
                 ? controller.animationClips.Where(clip => clip != null).Distinct().OrderBy(clip => clip.name).ToList()
                 : new List<AnimationClip>();
@@ -100,6 +103,7 @@ namespace Panteon.Data
                 if (direction.HasValue) resolved[(int)direction.Value] = clip;
             }
 
+            // Some units lack a direction; use the closest valid clip.
             var common = resolved[(int)UnitAnimationDirection.Right] ?? clips.FirstOrDefault() ?? fallback;
             var hashes = new int[resolved.Length];
             for (var i = 0; i < resolved.Length; i++) hashes[i] = StateHash(resolved[i] ?? common);

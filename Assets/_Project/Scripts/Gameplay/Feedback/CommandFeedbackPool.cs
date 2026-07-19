@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace Panteon.Gameplay.Feedback
 {
+    // Reuses the short-lived markers shown after right clicks.
     internal sealed class CommandFeedbackPool
     {
         private const int PrewarmCount = 6;
@@ -39,6 +40,7 @@ namespace Panteon.Gameplay.Feedback
             else if (_active.Count < MaxCount) ring = Create();
             else
             {
+                // Recycle the oldest marker when several commands arrive together.
                 ring = _active[0];
                 _active.RemoveAt(0);
             }

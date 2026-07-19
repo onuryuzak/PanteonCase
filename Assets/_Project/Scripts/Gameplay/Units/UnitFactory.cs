@@ -8,6 +8,7 @@ using UnityEngine;
 
 namespace Panteon.Gameplay.Units
 {
+    // Creates and recycles units, and keeps the active-unit list.
     public sealed class UnitFactory
     {
         private readonly PoolManager _pool;
@@ -15,6 +16,7 @@ namespace Panteon.Gameplay.Units
         private readonly IPathfinder _pathfinder;
         private readonly EventBus _bus;
         private readonly Transform _root;
+        // The prefab key tells PoolManager where this unit belongs.
         private readonly Dictionary<Unit, GameObject> _prefabs = new Dictionary<Unit, GameObject>();
         public IEnumerable<Unit> ActiveUnits => _prefabs.Keys;
 
@@ -41,8 +43,7 @@ namespace Panteon.Gameplay.Units
         {
             if (IsUnitCellFree(preferred)) return preferred;
 
-            // Breadth-first search keeps every additional unit as close as possible
-            // to its barracks' designated spawn cell without stacking units.
+            // Spawn near the Barracks marker without placing units on top of each other.
             var frontier = new Queue<Vector2Int>();
             var visited = new HashSet<Vector2Int> { preferred };
             frontier.Enqueue(preferred);

@@ -9,6 +9,7 @@ using UnityEngine.EventSystems;
 
 namespace Panteon.Gameplay.Selection
 {
+    // Handles single select, box select and right-click commands.
     public sealed class SelectionController : MonoBehaviour
     {
         [SerializeField] private Camera _camera;
@@ -52,6 +53,7 @@ namespace Panteon.Gameplay.Selection
         public void IssueGroupMove(IReadOnlyList<Unit> units, Vector2Int destination)
         {
             if (units == null || units.Count == 0) return;
+            // Give each unit a nearby cell so the group does not stack.
             var offsets = GetSpiralOffsets(units.Count);
             for (var i = 0; i < units.Count; i++)
             {
@@ -100,6 +102,7 @@ namespace Panteon.Gameplay.Selection
             ClearSelection();
             if (_unitFactory == null) return;
 
+            // UnitFactory already tracks active units, so no scene search is needed.
             foreach (var unit in _unitFactory.ActiveUnits)
             {
                 if (unit == null || unit.IsDead || unit.Faction != Faction.Player) continue;

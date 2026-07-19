@@ -6,6 +6,7 @@ using UnityEngine.UI;
 
 namespace Panteon.UI
 {
+    // Building cards and the downward looping scroll live here.
     internal sealed class ProductionMenuView
     {
         private const int ColumnCount = 2;
@@ -132,6 +133,7 @@ namespace Panteon.UI
             if (_buttons.Count == 0)
                 throw new InvalidOperationException("RuntimeHUD requires at least one authored building card.");
 
+            // Extra catalog entries use the first authored card as a template.
             var template = _buttons[0];
             while (_buttons.Count < requiredCount)
             {
@@ -145,6 +147,7 @@ namespace Panteon.UI
 
         private void ConfigureScrollContent(bool resetToStart)
         {
+            // If everything fits, leave scrolling off.
             _rowStride = Mathf.Max(1f, _buttonSize.y + _spacing);
             var sourceRows = SourceRowCount;
             var cycleHeight = sourceRows * _rowStride;
@@ -192,6 +195,7 @@ namespace Panteon.UI
         private void PositionRecycledCards()
         {
             if (_rowStride <= 0f) return;
+            // Move the same cards to later rows; do not copy catalog entries.
             var sourceRows = SourceRowCount;
             var firstVisibleRow = 0;
             var cycleStartRow = 0;

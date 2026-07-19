@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace Panteon.Gameplay.Combat
 {
+    // World-space bar; the orange layer trails behind recent damage.
     public sealed class HealthBarView : MonoBehaviour
     {
         private const float DefaultWidth = 0.62f;
@@ -110,6 +111,7 @@ namespace Panteon.Gameplay.Combat
             }
             else if (normalized < _healthNormalized)
             {
+                // Leave the old value visible briefly so small hits can be read.
                 _chipNormalized = Mathf.Max(_chipNormalized, _healthNormalized);
                 _chipReleaseTime = Time.time + ChipDelay;
                 _healthNormalized = normalized;

@@ -4,7 +4,7 @@ using UnityEngine.UI;
 namespace Panteon.UI
 {
     /// <summary>
-    /// Runtime-only HUD binding and layout utilities. Visual hierarchy and styling belong to the authored prefab.
+    /// Layout helpers for the authored HUD prefab.
     /// </summary>
     internal sealed class HudViewFactory
     {
@@ -107,6 +107,7 @@ namespace Panteon.UI
             if (sprite == null || bounds.width <= 0f || bounds.height <= 0f || sprite.rect.height <= 0f)
                 return bounds;
 
+            // Size around the painted area, not transparent atlas padding.
             var content = ClampNormalizedRect(normalizedContentRect);
             var height = bounds.height / content.height;
             var width = height * sprite.rect.width / sprite.rect.height;

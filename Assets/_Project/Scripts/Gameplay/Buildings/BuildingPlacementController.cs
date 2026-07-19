@@ -6,6 +6,7 @@ using UnityEngine.EventSystems;
 
 namespace Panteon.Gameplay.Buildings
 {
+    // Updates the placement ghost and confirms a building on left click.
     public sealed class BuildingPlacementController : MonoBehaviour, IBuildingPlacementService
     {
         [SerializeField] private Camera _camera;
@@ -49,6 +50,7 @@ namespace Panteon.Gameplay.Buildings
             if (!IsPlacing || _grid == null || _camera == null) return;
             var world = _camera.ScreenToWorldPoint(Input.mousePosition);
             _hoveredCell = _grid.WorldToCell(world);
+            // A free anchor cell is not enough; every footprint cell must be open.
             _valid = _factory != null && _factory.CanPlace(_activeDefinition, _hoveredCell);
             if (_ghost != null)
             {
@@ -78,6 +80,7 @@ namespace Panteon.Gameplay.Buildings
         private void ApplyGhostLayout(BuildingDefinitionSO definition)
         {
             if (_ghost == null || definition == null) return;
+            // Use the same sizing path as BuildingView or the ghost changes after placement.
             float scale;
             Vector3 offset;
             if (!BuildingVisualScaleUtility.TryGetWorldLayout(definition, out scale, out offset)) return;

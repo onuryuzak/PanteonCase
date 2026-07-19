@@ -7,6 +7,7 @@ using UnityEngine.UI;
 
 namespace Panteon.UI
 {
+    // Switches between empty, single-selection and group-selection layouts.
     internal sealed class InformationPanelView
     {
         private readonly HudViewFactory _factory;
@@ -118,6 +119,7 @@ namespace Panteon.UI
 
         public void Show(IDamageable selected, IProductionBuilding building, Action<IProductionBuilding, UnitDefinitionSO> requestProduction)
         {
+            // Shared interfaces keep this view independent from Gameplay.
             if (selected == null)
             {
                 ShowEmpty();

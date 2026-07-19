@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace Panteon.Gameplay.Buildings
 {
+    // Fits the visible artwork to the cells reserved by the building.
     internal static class BuildingVisualScaleUtility
     {
         public static bool TryGetWorldLayout(BuildingDefinitionSO definition,
@@ -13,6 +14,7 @@ namespace Panteon.Gameplay.Buildings
             if (definition == null || definition.Icon == null) return false;
 
             var spriteSize = (Vector2)definition.Icon.bounds.size;
+            // Tiny Swords sprites include transparent padding, so bounds alone look too small.
             var contentRect = definition.VisualContentRect;
             var contentSize = Vector2.Scale(spriteSize, contentRect.size);
             if (contentSize.x <= 0f || contentSize.y <= 0f) return false;

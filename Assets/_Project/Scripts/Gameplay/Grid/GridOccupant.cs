@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace Panteon.Gameplay.Grid
 {
+    // Remembers which cells this building registered in GridManager.
     public sealed class GridOccupant : MonoBehaviour
     {
         private GridManager _grid;
@@ -25,6 +26,7 @@ namespace Panteon.Gameplay.Grid
         public void Release()
         {
             if (!_occupied) return;
+            // Only release our own cells; another claim may have replaced one meanwhile.
             _grid.Free(_origin, _footprint, _building);
             _occupied = false;
         }

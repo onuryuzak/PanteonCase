@@ -6,6 +6,7 @@ using UnityEngine;
 namespace Panteon.Gameplay
 {
     [RequireComponent(typeof(Camera))]
+    // Keeps the game board framed while still allowing pan and hit shake.
     public sealed class CameraFitToAspect : MonoBehaviour
     {
         [SerializeField] private float _baseOrthoSize = 8f;
@@ -51,6 +52,7 @@ namespace Panteon.Gameplay
         private void Fit()
         {
             if (_camera == null) _camera = GetComponent<Camera>();
+            // Recalculate only after a resolution change; this otherwise runs every frame.
             _lastWidth = Screen.width;
             _lastHeight = Screen.height;
             var aspect = _lastHeight > 0 ? (float)_lastWidth / _lastHeight : _targetAspect;
@@ -80,6 +82,7 @@ namespace Panteon.Gameplay
         private void ApplyShakeOffset()
         {
             if (_shakeRemaining <= 0f || _shakeDuration <= 0f) return;
+            // Remove last frame's shake before adding the new offset to avoid camera drift.
             _shakeRemaining = Mathf.Max(0f, _shakeRemaining - Time.unscaledDeltaTime);
             _shakePhase += Time.unscaledDeltaTime * 52f;
             var decay = _shakeRemaining / _shakeDuration;

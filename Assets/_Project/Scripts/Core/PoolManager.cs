@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace Panteon.Core
 {
+    // Prefab is the key, so returned objects always reach the right pool.
     public sealed class PoolManager : MonoBehaviour
     {
         private readonly Dictionary<GameObject, ObjectPool> _pools = new Dictionary<GameObject, ObjectPool>();
@@ -25,6 +26,7 @@ namespace Panteon.Core
             if (prefab == null || count <= 0) yield break;
             var pool = GetOrCreatePool(prefab, parent);
             var batchSize = Mathf.Max(1, perFrame);
+            // Split prewarming across frames; doing the full catalog at once causes a hitch.
             for (var remaining = count; remaining > 0;)
             {
                 var batch = Mathf.Min(batchSize, remaining);

@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace Panteon.Gameplay.Pathfinding
 {
+    // A* for straight and diagonal movement on GridManager.
     public sealed class AStarPathfinder : IPathfinder
     {
         public List<Vector2Int> FindPath(Vector2Int start, Vector2Int goal, GridManager grid)
@@ -11,6 +12,7 @@ namespace Panteon.Gameplay.Pathfinding
             if (grid == null || !grid.IsWalkable(start) || !grid.IsWalkable(goal)) return null;
             if (start == goal) return new List<Vector2Int> { start };
 
+            // The open set can get large, so keep it in a min-heap.
             var open = new BinaryMinHeap<PathNode>(grid.CellCount);
             var lookup = new Dictionary<Vector2Int, PathNode>();
             var closed = new HashSet<Vector2Int>();
@@ -47,6 +49,7 @@ namespace Panteon.Gameplay.Pathfinding
 
         private static int Heuristic(Vector2Int a, Vector2Int b)
         {
+            // Costs 10/14 approximate one cell and sqrt(2) cells.
             var dx = Mathf.Abs(a.x - b.x);
             var dy = Mathf.Abs(a.y - b.y);
             return 14 * Mathf.Min(dx, dy) + 10 * Mathf.Abs(dx - dy);

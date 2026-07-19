@@ -11,6 +11,7 @@ using UnityEngine;
 
 namespace Panteon.Gameplay.Units
 {
+    // Runtime unit logic: movement, attacks and pooled cleanup.
     public sealed class Unit : Entity, IUnitPresentation, IPoolable
     {
         private GridManager _grid;
@@ -52,6 +53,7 @@ namespace Panteon.Gameplay.Units
             _pathfinder = pathfinder;
             _bus = bus;
             _returnToPool = returnToPool;
+            // A pooled unit may still have old callbacks, so bind everything again.
             CancelCurrentCommand();
             Health.OnHealthChanged -= HandleHealthChanged;
             Health.OnDied -= HandleDied;
@@ -86,6 +88,7 @@ namespace Panteon.Gameplay.Units
         public bool AttackTarget(IDamageable target)
         {
             if (target == null || target.IsDead || ReferenceEquals(target, this)) return false;
+            // A new order must cancel both the approach and the attack loop.
             CancelCurrentCommand();
             _currentCommand = StartCoroutine(AttackRoutine(target));
             return true;
@@ -112,6 +115,7 @@ namespace Panteon.Gameplay.Units
             while (index < path.Count)
             {
                 var next = path[index];
+                // Only replan if a grid change blocks the next cell.
                 if (_grid.Revision != _pathGridRevision && !_grid.IsWalkable(next))
                 {
                     var replanned = _pathfinder.FindPath(GridPosition, destination, _grid);
@@ -211,6 +215,7 @@ namespace Panteon.Gameplay.Units
 
         private List<Vector2Int> FindApproachPath(TargetArea targetArea)
         {
+            // Try each reachable attack cell and keep the cheapest path.
             List<Vector2Int> bestPath = null;
             var bestScore = float.PositiveInfinity;
             var radius = Mathf.Max(1, Mathf.CeilToInt(Definition.AttackRange / Mathf.Max(0.01f, _grid.CellSize)));
@@ -323,6 +328,7 @@ namespace Panteon.Gameplay.Units
         {
             if (_grid == null) return false;
 
+            // An interrupted move may stop between cells; ease back to a valid center.
             var nearest = ResolveNearestWalkableCell();
             var destination = _grid.CellToWorld(nearest);
 

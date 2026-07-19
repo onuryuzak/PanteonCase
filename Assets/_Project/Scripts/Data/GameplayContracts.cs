@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Panteon.Data
 {
-    // Shared contracts let UI consume gameplay state without referencing Gameplay assembly types.
+    // UI reads gameplay state through these interfaces, not concrete classes.
     public interface IEntityPresentation : IDamageable, ISelectable
     {
         string DisplayName { get; }

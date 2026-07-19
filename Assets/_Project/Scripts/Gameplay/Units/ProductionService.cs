@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Panteon.Gameplay.Units
 {
-    // Gameplay-side event handler keeps unit spawning out of UI controllers.
+    // UI requests production; this service performs the actual spawn.
     public sealed class ProductionService : IDisposable
     {
         private readonly UnitFactory _unitFactory;

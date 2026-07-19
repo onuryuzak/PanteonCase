@@ -5,6 +5,7 @@ using UnityEngine;
 
 namespace Panteon.Gameplay.Grid
 {
+    // Source of truth for occupied cells and world/grid conversion.
     public sealed class GridManager : MonoBehaviour
     {
         [SerializeField] private Vector2Int _size = new Vector2Int(24, 16);
@@ -15,6 +16,7 @@ namespace Panteon.Gameplay.Grid
         public int CellCount => _cells.Count;
         public Vector2Int Size => _size;
         public float CellSize => _cellSize;
+        // Units compare this value to know whether their path may be stale.
         public int Revision { get; private set; }
 
         private void Awake() => Initialize(_size, _cellSize, _origin);
@@ -74,6 +76,7 @@ namespace Panteon.Gameplay.Grid
                 if (x == 0 && y == 0) continue;
                 var next = cell + new Vector2Int(x, y);
                 if (!Contains(next)) continue;
+                // Block diagonal corner cutting between two occupied cells.
                 if (x != 0 && y != 0 &&
                     (!IsWalkable(cell + new Vector2Int(x, 0)) || !IsWalkable(cell + new Vector2Int(0, y))))
                     continue;

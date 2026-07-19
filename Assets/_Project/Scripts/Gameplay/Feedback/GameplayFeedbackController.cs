@@ -5,6 +5,7 @@ using UnityEngine;
 namespace Panteon.Gameplay.Feedback
 {
     [DisallowMultipleComponent]
+    // Turns command events into move or attack markers.
     public sealed class GameplayFeedbackController : MonoBehaviour
     {
         private EventBus _bus;

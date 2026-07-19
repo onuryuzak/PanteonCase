@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Panteon.Gameplay.Units
 {
     /// <summary>
-    /// Renders all remaining path cells as hollow rings in a single mesh.
+    /// Builds all visible path rings into one mesh.
     /// </summary>
     internal sealed class UnitPathPreview : MonoBehaviour
     {

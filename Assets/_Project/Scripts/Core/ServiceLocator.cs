@@ -3,6 +3,7 @@ using System.Collections.Generic;
 
 namespace Panteon.Core
 {
+    // Scene services are registered by Bootstrap and cleared when it shuts down.
     public sealed class ServiceLocator
     {
         private static ServiceLocator _instance;

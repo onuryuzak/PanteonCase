@@ -262,6 +262,8 @@ The typed `EventBus` carries:
 - command feedback;
 - camera shake requests.
 
+Event contracts are grouped by feature under `Scripts/Data/Events`. Each file owns a cohesive vocabulary—selection, building, entity, production, camera feedback, or command feedback—instead of accumulating unrelated messages in a catch-all event file. Closely related types, such as `CommandFeedbackType` and `CommandFeedbackRequested`, remain together because they form one public message contract.
+
 Every long-lived subscriber explicitly unsubscribes during disposal or destruction.
 
 ## Tests
@@ -318,7 +320,7 @@ Assets/
 │   ├── ScriptableObjects/     Building catalog, building definitions, unit definitions, visual profiles
 │   ├── Scripts/
 │   │   ├── Core/              Event bus, pools, service registry, base contracts
-│   │   ├── Data/              Definitions, events, presentation and animation contracts
+│   │   ├── Data/              Definitions, feature-grouped events, presentation and animation contracts
 │   │   ├── Gameplay/          Grid, pathfinding, placement, selection, production, combat, feedback
 │   │   └── UI/                HUD bindings, views, layout, production and information presentation
 │   ├── Settings/              Units, Buildings, and HUD Sprite Atlases

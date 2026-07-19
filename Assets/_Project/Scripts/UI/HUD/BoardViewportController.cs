@@ -2,6 +2,7 @@ using UnityEngine;
 
 namespace Panteon.UI
 {
+    // Keeps the board camera aligned with the center HUD panel.
     internal sealed class BoardViewportController
     {
         private static readonly Color BoardBackground = new Color32(42, 70, 45, 255);
@@ -31,6 +32,7 @@ namespace Panteon.UI
         public void Apply(Rect board)
         {
             if (_camera == null || Screen.width <= 0 || Screen.height <= 0 || board.width <= 0f || board.height <= 0f) return;
+            // Round to pixels or some grid lines become thicker than others.
             board = PixelAlign(board);
             var padding = 1f + Mathf.Max(0f, _paddingPercent);
             var pixelsPerCell = Mathf.Max(4, Mathf.FloorToInt(Mathf.Min(
@@ -71,6 +73,7 @@ namespace Panteon.UI
         private void UpdateGridSprite(int pixelsPerCell)
         {
             pixelsPerCell = Mathf.Clamp(pixelsPerCell, 4, 256);
+            // A new texture is only needed when the cell pixel size changes.
             if (_renderer == null || _pixelsPerCell == pixelsPerCell && _sprite != null) return;
             if (_sprite != null) Object.Destroy(_sprite);
             if (_texture != null) Object.Destroy(_texture);
@@ -81,6 +84,7 @@ namespace Panteon.UI
 
         private Sprite CreateGridSprite(int pixelsPerCell)
         {
+            // One texture is cheaper than a renderer for every cell.
             var width = Mathf.Max(1, _gridSize.x * pixelsPerCell);
             var height = Mathf.Max(1, _gridSize.y * pixelsPerCell);
             _texture = new Texture2D(width, height, TextureFormat.RGBA32, false)
